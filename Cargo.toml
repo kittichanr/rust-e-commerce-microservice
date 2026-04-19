@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    # "services/product-service",
+    # "services/order-service",
+    "services/auth-service",
+    # "infrastructure/api-gateway",
+    "common-libs",
+]
+resolver = "2"

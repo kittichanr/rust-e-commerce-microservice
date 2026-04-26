@@ -1,54 +1,42 @@
-use common_libs::proto::auth::greeter_server::Greeter;
-use common_libs::proto::auth::{HelloReply, HelloRequest};
-use tokio::sync::mpsc;
-use tokio::time::{Duration, sleep};
-use tokio_stream::wrappers::ReceiverStream;
+use common_libs::proto::auth::auth_server::Auth;
+use common_libs::proto::auth::{RegisterRequest, RegisterResponse};
 use tonic::{Request, Response, Status};
 
 #[derive(Debug, Default)]
-pub struct MyGreeter {}
+pub struct MyAuth {}
 
 #[tonic::async_trait]
-impl Greeter for MyGreeter {
-    type SayHelloStreamStream = ReceiverStream<Result<HelloReply, Status>>;
-
-    async fn say_hello(
+impl Auth for MyAuth {
+    async fn register(
         &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<HelloReply>, Status> {
-        println!("Got a request: {:?}", request);
-        let name = request.into_inner().name;
-        let reply = HelloReply {
-            message: format!("Hello {}!", name),
-        };
+        request: Request<RegisterRequest>,
+    ) -> Result<Response<RegisterResponse>, Status> {
+        let inner = request.into_inner();
+        let username = inner.username;
+        let password = inner.password;
+        let email = inner.email;
 
-        Ok(Response::new(reply))
-    }
+        if username.is_empty() || password.is_empty() || email.is_empty() {
+            return Err(Status::invalid_argument(
+                "Username, password, and email are required",
+            ));
+        }
 
-    // server-streaming RPC
-    async fn say_hello_stream(
-        &self,
-        request: Request<HelloRequest>,
-    ) -> Result<Response<Self::SayHelloStreamStream>, Status> {
-        let name = request.into_inner().name;
+        // Validate email format (simple regex check)
+        let email_regex = regex::Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").unwrap();
+        if !email_regex.is_match(&email) {
+            return Err(Status::invalid_argument("Invalid email format"));
+        }
 
-        let (tx, rx) = mpsc::channel(4);
+        // Check if the username already exists in the database (not implemented here)
+        // If it does, return an error
 
-        tokio::spawn(async move {
-            let greetings = vec![
-                format!("Hello, {}! (1/3)", name),
-                format!("Hi again, {}! (2/3)", name),
-                format!("Greetings, {}! (3/3)", name),
-            ];
+        // Hash the password and store the user in the database (not implemented here)
+        // For demonstration, we assume registration is always successful
 
-            for greeting in greetings {
-                if tx.send(Ok(HelloReply { message: greeting })).await.is_err() {
-                    break;
-                }
-                sleep(Duration::from_secs(1)).await;
-            }
-        });
-
-        Ok(Response::new(ReceiverStream::new(rx)))
+        Ok(Response::new(RegisterResponse {
+            success: true,
+            message: "Registered successfully".into(),
+        }))
     }
 }

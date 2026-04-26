@@ -39,6 +39,7 @@ name = "auth-service"
 version = "0.1.0"
 dependencies = [
  "common-libs",
+ "regex",
  "tokio",
  "tokio-stream",
  "tonic",

@@ -2,15 +2,17 @@ syntax = "proto3";
 
 package auth;
 
-service Greeter {
-  rpc SayHello (HelloRequest) returns (HelloReply);
-  rpc SayHelloStream (HelloRequest) returns (stream HelloReply);
+service Auth {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
 }
 
-message HelloRequest {
-  string name = 1;
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+  string email    = 3;
 }
 
-message HelloReply {
-  string message = 1;
+message RegisterResponse {
+  bool   success = 1;
+  string message = 2;
 }

@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 
 common-libs = { path = "../../common-libs" }
+regex = "1.12.3"
 tokio = { version = "1.52.1", features = ["full"] }
 tokio-stream = "0.1.18"
 tonic = "0.14.5"

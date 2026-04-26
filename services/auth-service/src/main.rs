@@ -1,16 +1,16 @@
-use auth_service::server::MyGreeter;
-use common_libs::proto::auth::greeter_server::GreeterServer;
+use auth_service::server::MyAuth;
+use common_libs::proto::auth::auth_server::AuthServer;
 use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
-    let greeter = MyGreeter::default();
+    let my_auth = MyAuth::default();
 
     println!("Server listening on {}", addr);
 
     Server::builder()
-        .add_service(GreeterServer::new(greeter))
+        .add_service(AuthServer::new(my_auth))
         .serve(addr)
         .await?;
 

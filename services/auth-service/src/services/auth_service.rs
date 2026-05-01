@@ -2,8 +2,17 @@ use common_libs::proto::auth::auth_server::Auth;
 use common_libs::proto::auth::{RegisterRequest, RegisterResponse};
 use tonic::{Request, Response, Status};
 
-#[derive(Debug, Default)]
-pub struct MyAuth {}
+use crate::state::AppState;
+
+pub struct MyAuth {
+    app_state: AppState,
+}
+
+impl MyAuth {
+    pub fn new(app_state: AppState) -> Self {
+        Self { app_state }
+    }
+}
 
 #[tonic::async_trait]
 impl Auth for MyAuth {
@@ -27,6 +36,16 @@ impl Auth for MyAuth {
 
         // Check if the email already exists in the database (not implemented here)
         // If it does, return an error
+        let user = sqlx::query!("SELECT * FROM users WHERE email = ?", email)
+            .fetch_optional(&self.app_state.db)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if user.is_some() {
+            return Err(Status::already_exists("Email already registered"));
+        }
+
+        // Check password is match from database (not implemented here)
 
         // Hash the password and store the user in the database (not implemented here)
         // For demonstration, we assume registration is always successful

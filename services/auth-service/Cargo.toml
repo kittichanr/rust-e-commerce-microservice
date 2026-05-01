@@ -50,6 +50,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Configuration
 config = "0.14"
 dotenvy = "0.15"
+envy = "0.4.2"
 
 [[bin]]
 name = "auth-service"

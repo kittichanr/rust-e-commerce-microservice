@@ -12,14 +12,11 @@ impl Auth for MyAuth {
         request: Request<RegisterRequest>,
     ) -> Result<Response<RegisterResponse>, Status> {
         let inner = request.into_inner();
-        let username = inner.username;
-        let password = inner.password;
         let email = inner.email;
+        let password = inner.password;
 
-        if username.is_empty() || password.is_empty() || email.is_empty() {
-            return Err(Status::invalid_argument(
-                "Username, password, and email are required",
-            ));
+        if password.is_empty() || email.is_empty() {
+            return Err(Status::invalid_argument("Email and password are required"));
         }
 
         // Validate email format (simple regex check)
@@ -28,7 +25,7 @@ impl Auth for MyAuth {
             return Err(Status::invalid_argument("Invalid email format"));
         }
 
-        // Check if the username already exists in the database (not implemented here)
+        // Check if the email already exists in the database (not implemented here)
         // If it does, return an error
 
         // Hash the password and store the user in the database (not implemented here)

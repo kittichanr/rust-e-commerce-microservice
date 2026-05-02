@@ -2,7 +2,7 @@ use common_libs::proto::auth::auth_server::Auth;
 use common_libs::proto::auth::{RegisterRequest, RegisterResponse};
 use tonic::{Request, Response, Status};
 
-use crate::state::AppState;
+use crate::config::AppState;
 
 pub struct MyAuth {
     app_state: AppState,

@@ -1,6 +1,8 @@
+use std::env;
+
+use dotenvy::from_path;
 use serde::Deserialize;
 use sqlx::MySqlPool;
-use std::env;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -14,7 +16,10 @@ pub struct Config {
 impl Config {
     /// Load configuration from environment variables
     pub fn from_env() -> Result<Self, env::VarError> {
-        dotenvy::dotenv().ok();
+        from_path("services/auth-service/.env")
+            .or_else(|_| from_path("services/auth-service/.env"))
+            .or_else(|_| from_path(".env"))
+            .ok();
 
         Ok(Config {
             db_url: env::var("DATABASE_URL")?,
@@ -28,12 +33,10 @@ impl Config {
 }
 
 /// Application state shared across gRPC service handlers
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     pub db: MySqlPool,
     // Future additions:
-    // pub config: Arc<Config>,
-    // pub user_repo: Arc<dyn UserRepository>,
     // pub redis: deadpool_redis::Pool,
 }
 

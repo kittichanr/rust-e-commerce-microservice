@@ -13,6 +13,7 @@ tokio-stream = "0.1.18"
 
 # gRPC
 tonic = "0.14.5"
+async-trait = "0.1"
 
 # Database
 sqlx = { version = "0.8", features = [
@@ -40,7 +41,7 @@ argon2 = { version = "0.5", features = ["std"] }
 jsonwebtoken = "9.3"
 
 # Utilities
-uuid = { version = "1.11", features = ["v4", "serde"] }
+uuid = { version = "1.11", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Logging

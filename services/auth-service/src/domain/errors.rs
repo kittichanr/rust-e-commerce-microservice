@@ -21,6 +21,9 @@ pub enum AppError {
     #[error("password hashing error: {0}")]
     PasswordHash(String),
 
+    #[error("JWT error: {0}")]
+    JwtError(String),
+
     #[error("internal error: {0}")]
     Internal(String),
 }
@@ -40,6 +43,10 @@ impl From<AppError> for Status {
             AppError::PasswordHash(msg) => {
                 tracing::error!("Password hashing error: {}", msg);
                 Status::internal("internal error")
+            }
+            AppError::JwtError(msg) => {
+                tracing::error!("JWT error: {}", msg);
+                Status::unauthenticated("invalid or expired token")
             }
             AppError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);

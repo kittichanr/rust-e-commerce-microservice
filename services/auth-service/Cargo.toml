@@ -39,6 +39,7 @@ anyhow = "1.0"
 # Security
 argon2 = { version = "0.5", features = ["std"] }
 jsonwebtoken = "9.3"
+sha2 = "0.10"
 
 # Utilities
 uuid = { version = "1.11", features = ["v4", "v7", "serde"] }

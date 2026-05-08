@@ -1,8 +1,9 @@
 use chrono::{Duration, Utc};
 use common_libs::proto::auth::auth_server::Auth;
 use common_libs::proto::auth::{
-    LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest,
-    RefreshTokenResponse, RegisterRequest, RegisterResponse,
+    GetUserInfoRequest, GetUserInfoResponse, LoginRequest, LoginResponse, LogoutRequest,
+    LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest,
+    RegisterResponse, UserInfo,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -326,6 +327,57 @@ impl Auth for MyAuth {
         Ok(Response::new(LogoutResponse {
             success: true,
             message: "logged out successfully".into(),
+        }))
+    }
+
+    async fn get_user_info(
+        &self,
+        request: Request<GetUserInfoRequest>,
+    ) -> Result<Response<GetUserInfoResponse>, Status> {
+        let inner = request.into_inner();
+        let access_token = inner.access_token;
+
+        // Validate input
+        if access_token.is_empty() {
+            return Err(Status::invalid_argument("access token is required"));
+        }
+
+        // Validate and decode the access token
+        let claims = utils::validate_access_token(&access_token, &self.config.jwt_secret)
+            .map_err(|_| Status::unauthenticated("invalid or expired access token"))?;
+
+        // Parse user_id from claims
+        let user_id = Uuid::parse_str(&claims.sub)
+            .map_err(|_| Status::internal("invalid user id in token"))?;
+
+        // Find the user in the database
+        let user = self
+            .user_repo
+            .find_by_id(user_id)
+            .await
+            .map_err(Status::from)?
+            .ok_or_else(|| Status::not_found("user not found"))?;
+
+        // Check if user is active
+        if !user.is_active {
+            return Err(Status::unauthenticated("account is deactivated"));
+        }
+
+        tracing::info!("User info retrieved successfully for user_id: {}", user_id);
+
+        // Build UserInfo response
+        let user_info = UserInfo {
+            user_id: user.id.to_string(),
+            email: user.email.clone(),
+            is_active: user.is_active,
+            created_at: user.created_at.timestamp(),
+            updated_at: user.updated_at.timestamp(),
+        };
+
+        Ok(Response::new(GetUserInfoResponse {
+            success: true,
+            message: "user info retrieved successfully".into(),
+            user_info: Some(user_info),
         }))
     }
 }

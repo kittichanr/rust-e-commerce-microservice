@@ -7,6 +7,7 @@ service Auth {
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
 }
 
 message RegisterRequest {
@@ -51,4 +52,22 @@ message LogoutRequest {
 message LogoutResponse {
   bool   success = 1;
   string message = 2;
+}
+
+message GetUserInfoRequest {
+  string access_token = 1; // JWT access token for authentication
+}
+
+message GetUserInfoResponse {
+  bool   success     = 1;
+  string message     = 2;
+  UserInfo user_info = 3;
+}
+
+message UserInfo {
+  string user_id     = 1; // UUID as string
+  string email       = 2;
+  bool   is_active   = 3;
+  int64  created_at  = 4; // Unix timestamp
+  int64  updated_at  = 5; // Unix timestamp
 }

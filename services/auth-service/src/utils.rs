@@ -3,13 +3,26 @@ use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::errors::AppError;
 
+/// Static email validation regex (compiled once, thread-safe)
+static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+        .expect("Invalid email regex pattern")
+});
+
 pub fn generate_id() -> Uuid {
     Uuid::now_v7()
+}
+
+/// Validate email format using pre-compiled regex
+pub fn is_valid_email(email: &str) -> bool {
+    EMAIL_REGEX.is_match(email)
 }
 
 pub fn hash_password(password: &str) -> Result<String, AppError> {
@@ -285,5 +298,22 @@ mod tests {
     fn test_hash_token_empty() {
         let result = hash_token("");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_is_valid_email_valid() {
+        assert!(is_valid_email("user@example.com"));
+        assert!(is_valid_email("test.user@domain.co.uk"));
+        assert!(is_valid_email("name+tag@example.org"));
+    }
+
+    #[test]
+    fn test_is_valid_email_invalid() {
+        assert!(!is_valid_email(""));
+        assert!(!is_valid_email("invalid"));
+        assert!(!is_valid_email("@example.com"));
+        assert!(!is_valid_email("user@"));
+        assert!(!is_valid_email("user @example.com")); // space
+        assert!(!is_valid_email("user@example")); // no TLD
     }
 }

@@ -49,11 +49,8 @@ impl Auth for MyAuth {
             return Err(Status::invalid_argument("email and password are required"));
         }
 
-        // Validate email format using regex
-        let email_regex = regex::Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-            .map_err(|e| Status::internal(format!("regex error: {}", e)))?;
-
-        if !email_regex.is_match(&email) {
+        // Validate email format using pre-compiled regex
+        if !utils::is_valid_email(&email) {
             return Err(Status::invalid_argument("invalid email format"));
         }
 
@@ -100,24 +97,35 @@ impl Auth for MyAuth {
             return Err(Status::invalid_argument("email and password are required"));
         }
 
-        // Find user by email
-        let user = self
+        // Find user by email (return Option to prevent early exit)
+        let user_option = self
             .user_repo
             .find_by_email(&email)
             .await
-            .map_err(Status::from)?
+            .map_err(Status::from)?;
+
+        // Always perform password verification to prevent timing attacks
+        // If user doesn't exist, hash a dummy password to maintain constant time
+        let password_valid = match &user_option {
+            Some(user) => {
+                utils::verify_password(&password, &user.password_hash)
+                    .map_err(Status::from)?
+            }
+            None => {
+                // Perform dummy password hash to maintain constant time
+                // This ensures attackers can't distinguish between "user doesn't exist"
+                // and "wrong password" based on response time
+                let _ = utils::hash_password(&password).map_err(Status::from)?;
+                false
+            }
+        };
+
+        // Now check if user exists
+        let user = user_option
             .ok_or_else(|| Status::unauthenticated("invalid email or password"))?;
 
-        // Check if user is active
-        if !user.is_active {
-            return Err(Status::unauthenticated("account is deactivated"));
-        }
-
-        // Verify password
-        let password_valid =
-            utils::verify_password(&password, &user.password_hash).map_err(Status::from)?;
-
-        if !password_valid {
+        // Check if user is active and password is valid
+        if !user.is_active || !password_valid {
             return Err(Status::unauthenticated("invalid email or password"));
         }
 

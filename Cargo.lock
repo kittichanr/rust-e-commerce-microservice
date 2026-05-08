@@ -101,6 +101,7 @@ dependencies = [
  "dotenvy",
  "envy",
  "jsonwebtoken",
+ "once_cell",
  "regex",
  "serde",
  "serde_json",

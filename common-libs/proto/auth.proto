@@ -6,6 +6,7 @@ service Auth {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
 
 message RegisterRequest {
@@ -41,4 +42,13 @@ message RefreshTokenResponse {
   string access_token   = 3;
   string refresh_token  = 4;
   int64  expires_in     = 5;
+}
+
+message LogoutRequest {
+  string refresh_token = 1; // optional: revoke specific token, empty = revoke all
+}
+
+message LogoutResponse {
+  bool   success = 1;
+  string message = 2;
 }

@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
 use common_libs::proto::auth::auth_server::Auth;
 use common_libs::proto::auth::{
-    LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest,
-    RegisterResponse,
+    LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest,
+    RefreshTokenResponse, RegisterRequest, RegisterResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -273,6 +273,59 @@ impl Auth for MyAuth {
             access_token,
             refresh_token: new_refresh_token_string,
             expires_in: self.config.jwt_access_expiry_minutes * 60, // convert to seconds
+        }))
+    }
+
+    async fn logout(
+        &self,
+        request: Request<LogoutRequest>,
+    ) -> Result<Response<LogoutResponse>, Status> {
+        let inner = request.into_inner();
+        let refresh_token_string = inner.refresh_token;
+
+        // If no refresh token provided, return error
+        // (In production, you might want to support access token-based logout)
+        if refresh_token_string.is_empty() {
+            return Err(Status::invalid_argument(
+                "refresh token is required for logout",
+            ));
+        }
+
+        // Validate and decode the refresh token
+        let claims = utils::validate_refresh_token(&refresh_token_string, &self.config.jwt_secret)
+            .map_err(|_| Status::unauthenticated("invalid or expired refresh token"))?;
+
+        // Parse user_id from claims
+        let user_id = Uuid::parse_str(&claims.sub)
+            .map_err(|_| Status::internal("invalid user id in token"))?;
+
+        // Hash the refresh token to look it up in the database
+        let token_hash = utils::hash_token(&refresh_token_string).map_err(Status::from)?;
+
+        // Find the refresh token in the database
+        let stored_token = self
+            .refresh_token_repo
+            .find_by_token_hash(&token_hash)
+            .await
+            .map_err(|e| Status::internal(format!("database error: {}", e)))?
+            .ok_or_else(|| Status::not_found("refresh token not found"))?;
+
+        // Verify the token belongs to the correct user
+        if stored_token.user_id != user_id {
+            return Err(Status::unauthenticated("refresh token does not match user"));
+        }
+
+        // Revoke the refresh token
+        self.refresh_token_repo
+            .revoke(stored_token.id)
+            .await
+            .map_err(|e| Status::internal(format!("failed to revoke token: {}", e)))?;
+
+        tracing::info!("User logged out successfully (user_id: {})", user_id);
+
+        Ok(Response::new(LogoutResponse {
+            success: true,
+            message: "logged out successfully".into(),
         }))
     }
 }

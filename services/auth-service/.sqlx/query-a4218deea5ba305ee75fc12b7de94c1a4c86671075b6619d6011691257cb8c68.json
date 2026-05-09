@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)\n            VALUES (?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "a4218deea5ba305ee75fc12b7de94c1a4c86671075b6619d6011691257cb8c68"
+}

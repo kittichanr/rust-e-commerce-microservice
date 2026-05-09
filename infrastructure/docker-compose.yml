@@ -1,17 +1,17 @@
 version: "3.8"
 
 services:
-  # MySQL Database
+  # MySQL Database for Auth Service
   auth-db:
     image: mysql:8.0
     container_name: ecommerce-auth-db
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: auth_db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${AUTH_DB_NAME:-auth_db}
     ports:
-      - "3306:3306"
+      - "${AUTH_DB_PORT:-3306}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - auth_mysql_data:/var/lib/mysql
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test:
@@ -23,7 +23,7 @@ services:
           "localhost",
           "-u",
           "root",
-          "-prootpassword",
+          "-ppassword",
         ]
       interval: 10s
       timeout: 5s
@@ -31,6 +31,34 @@ services:
     networks:
       - ecommerce-network
 
+  # MySQL Database for Product Service
+  product-db:
+    image: mysql:8.0
+    container_name: ecommerce-product-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${PRODUCT_DB_NAME:-product_db}
+    ports:
+      - "${PRODUCT_DB_PORT:-3307}:3306"
+    volumes:
+      - product_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-ppassword",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
   # Auth Service
   auth-service:
     build:
@@ -38,20 +66,42 @@ services:
       dockerfile: services/auth-service/Dockerfile
     container_name: ecommerce-auth-service
     ports:
-      - "50051:50051"
+      - "${AUTH_SERVICE_PORT:-50051}:50051"
     environment:
-      DATABASE_URL: mysql://root:password@auth-db:3306/auth_db
-      RUST_LOG: info
+      DATABASE_URL: ${AUTH_DATABASE_URL:-mysql://root:password@auth-db:3306/auth_db}
+      RUST_LOG: ${RUST_LOG:-info}
       SERVICE_PORT: 50051
+      # JWT Configuration - loaded from .env file
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ACCESS_EXPIRY_MINUTES: ${JWT_ACCESS_EXPIRY_MINUTES:-15}
+      JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS:-7}
     depends_on:
       auth-db:
         condition: service_healthy
     networks:
       - ecommerce-network
     restart: unless-stopped
+  # Product Service (Database Setup Only)
+  # Uncomment to run database initialization in Docker
+  # product-service:
+  #   build:
+  #     context: ..
+  #     dockerfile: services/product-service/Dockerfile
+  #   container_name: ecommerce-product-service
+  #   environment:
+  #     DATABASE_URL: ${PRODUCT_DATABASE_URL:-mysql://root:password@product-db:3306/product_db}
+  #     RUST_LOG: ${RUST_LOG:-info}
+  #   depends_on:
+  #     product-db:
+  #       condition: service_healthy
+  #   networks:
+  #     - ecommerce-network
+  #   restart: "no"
 
 volumes:
-  mysql_data:
+  auth_mysql_data:
+    driver: local
+  product_mysql_data:
     driver: local
 
 networks:

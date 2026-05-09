@@ -29,7 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize auth service with all dependencies
     let my_auth = MyAuth::new(user_repo, refresh_token_repo, config);
 
-    let addr = "[::1]:50051".parse()?;
+    // Bind to all interfaces (0.0.0.0) to accept connections from other containers
+    let addr = "0.0.0.0:50051".parse()?;
     tracing::info!("Auth service listening on {}", addr);
     println!("Server listening on {}", addr);
 

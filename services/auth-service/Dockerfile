@@ -1,7 +1,11 @@
 # Build stage using cargo-chef for caching dependencies
-FROM lukemathwalker/cargo-chef:latest-rust-1.85 as chef
+FROM lukemathwalker/cargo-chef:latest as chef
 WORKDIR /app
-RUN apt update && apt install lld clang -y
+RUN apt update && apt install -y \
+    lld \
+    clang \
+    protobuf-compiler \
+    libprotobuf-dev
 
 # Planner stage - analyze dependencies
 FROM chef as planner
@@ -18,7 +22,7 @@ COPY . .
 # Enable SQLx offline mode for compile-time verification without database
 ENV SQLX_OFFLINE=true
 # Build the auth-service binary
-RUN cargo build --release --bin main -p auth-service
+RUN cargo build --release --bin auth-service -p auth-service
 
 # Runtime stage - minimal image
 FROM debian:bookworm-slim as runtime
@@ -29,7 +33,7 @@ RUN apt-get update -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 # Copy the compiled binary from builder
-COPY --from=builder /app/target/release/main /app/auth-service
+COPY --from=builder /app/target/release/auth-service /app/auth-service
 # Copy migrations for runtime database setup
 COPY --from=builder /app/services/auth-service/migrations /app/migrations
 # Expose gRPC port

@@ -59,6 +59,35 @@ services:
       retries: 5
     networks:
       - ecommerce-network
+
+  # MySQL Database for Order Service
+  order-db:
+    image: mysql:8.0
+    container_name: ecommerce-order-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${ORDER_DB_NAME:-order_db}
+    ports:
+      - "${ORDER_DB_PORT:-3308}:3306"
+    volumes:
+      - order_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-ppassword",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
   # Auth Service
   auth-service:
     build:
@@ -83,25 +112,46 @@ services:
     restart: unless-stopped
   # Product Service (Database Setup Only)
   # Uncomment to run database initialization in Docker
-  # product-service:
-  #   build:
-  #     context: ..
-  #     dockerfile: services/product-service/Dockerfile
-  #   container_name: ecommerce-product-service
-  #   environment:
-  #     DATABASE_URL: ${PRODUCT_DATABASE_URL:-mysql://root:password@product-db:3306/product_db}
-  #     RUST_LOG: ${RUST_LOG:-info}
-  #   depends_on:
-  #     product-db:
-  #       condition: service_healthy
-  #   networks:
-  #     - ecommerce-network
-  #   restart: "no"
+  product-service:
+    build:
+      context: ..
+      dockerfile: services/product-service/Dockerfile
+    container_name: ecommerce-product-service
+    environment:
+      DATABASE_URL: ${PRODUCT_DATABASE_URL:-mysql://root:password@product-db:3306/product_db}
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      product-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    restart: "no"
+
+  # Order Service
+  order-service:
+    build:
+      context: ..
+      dockerfile: services/order-service/Dockerfile
+    container_name: ecommerce-order-service
+    ports:
+      - "${ORDER_SERVICE_PORT:-50053}:50053"
+    environment:
+      DATABASE_URL: ${ORDER_DATABASE_URL:-mysql://root:password@order-db:3306/order_db}
+      RUST_LOG: ${RUST_LOG:-info}
+      SERVICE_PORT: 50053
+    depends_on:
+      order-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
 
 volumes:
   auth_mysql_data:
     driver: local
   product_mysql_data:
+    driver: local
+  order_mysql_data:
     driver: local
 
 networks:

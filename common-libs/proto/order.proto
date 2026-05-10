@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package order;
+
+service Order {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+}
+
+// Order status enum
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  CART = 1;
+  CHECKOUT = 2;
+  PAYMENT_PENDING = 3;
+  PAYMENT_FAILED = 4;
+  CONFIRMED = 5;
+  PROCESSING = 6;
+  SHIPPED = 7;
+  DELIVERED = 8;
+  CANCELLED = 9;
+}
+
+message OrderItem {
+  string product_id = 1;      // UUID as string
+  string product_name = 2;
+  int64 price = 3;            // Price in cents at time of order
+  int32 quantity = 4;
+  int64 subtotal = 5;         // price * quantity
+}
+
+message CreateOrderRequest {
+  string user_id = 1;         // UUID as string
+  repeated OrderItem items = 2;
+  optional string shipping_address = 3;
+  optional string billing_address = 4;
+  optional string notes = 5;
+}
+
+message CreateOrderResponse {
+  bool success = 1;
+  string message = 2;
+  OrderInfo order = 3;
+}
+
+message GetOrderRequest {
+  string order_id = 1;        // UUID as string
+}
+
+message GetOrderResponse {
+  bool success = 1;
+  string message = 2;
+  OrderInfo order = 3;
+}
+
+message UpdateOrderStatusRequest {
+  string order_id = 1;        // UUID as string
+  OrderStatus status = 2;
+}
+
+message UpdateOrderStatusResponse {
+  bool success = 1;
+  string message = 2;
+  OrderInfo order = 3;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;        // UUID as string
+  optional string reason = 2;
+}
+
+message CancelOrderResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListOrdersRequest {
+  optional string user_id = 1;      // Filter by user
+  optional OrderStatus status = 2;   // Filter by status
+  optional uint64 page = 3;
+  optional uint64 per_page = 4;
+}
+
+message ListOrdersResponse {
+  bool success = 1;
+  string message = 2;
+  repeated OrderInfo orders = 3;
+  uint64 total = 4;
+  uint64 page = 5;
+  uint64 per_page = 6;
+  uint64 total_pages = 7;
+}
+
+message OrderInfo {
+  string order_id = 1;              // UUID as string
+  string user_id = 2;               // UUID as string
+  repeated OrderItem items = 3;
+  int64 subtotal = 4;               // Sum of all items
+  int64 tax = 5;                    // Tax amount in cents
+  int64 shipping_fee = 6;           // Shipping fee in cents
+  int64 total = 7;                  // subtotal + tax + shipping_fee
+  OrderStatus status = 8;
+  optional string shipping_address = 9;
+  optional string billing_address = 10;
+  optional string notes = 11;
+  int64 created_at = 12;            // Unix timestamp
+  int64 updated_at = 13;            // Unix timestamp
+}

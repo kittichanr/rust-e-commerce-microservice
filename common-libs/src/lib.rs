@@ -7,4 +7,8 @@ pub mod proto {
     pub mod product {
         tonic::include_proto!("product");
     }
+
+    pub mod order {
+        tonic::include_proto!("order");
+    }
 }

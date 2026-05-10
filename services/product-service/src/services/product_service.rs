@@ -272,8 +272,64 @@ impl ProductService for MyProductService {
 
     async fn list_products(
         &self,
-        _request: Request<ListProductsRequest>,
+        request: Request<ListProductsRequest>,
     ) -> Result<Response<ListProductsResponse>, Status> {
-        Err(Status::unimplemented("list_products not implemented yet"))
+        let req = request.into_inner();
+
+        // Map gRPC request to domain filters
+        let filters = crate::domain::models::ProductFilters {
+            category: req.category,
+            is_active: req.is_active,
+            min_price: req.min_price,
+            max_price: req.max_price,
+            search: req.search,
+            page: req.page,
+            per_page: req.per_page,
+        };
+
+        // Get products from repository
+        match self.product_repo.find_all(filters).await {
+            Ok(paginated) => {
+                let products: Vec<ProductInfo> = paginated
+                    .data
+                    .into_iter()
+                    .map(|product| ProductInfo {
+                        product_id: product.id,
+                        sku: product.sku,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock_quantity: product.stock_quantity,
+                        category: product.category,
+                        image_url: product.image_url,
+                        is_active: product.is_active,
+                        created_at: product.created_at.timestamp(),
+                        updated_at: product.updated_at.timestamp(),
+                    })
+                    .collect();
+
+                Ok(Response::new(ListProductsResponse {
+                    success: true,
+                    message: "Products retrieved successfully".to_string(),
+                    products,
+                    total: paginated.total,
+                    page: paginated.page,
+                    per_page: paginated.per_page,
+                    total_pages: paginated.total_pages,
+                }))
+            }
+            Err(e) => {
+                tracing::error!("Failed to list products: {:?}", e);
+                Ok(Response::new(ListProductsResponse {
+                    success: false,
+                    message: "Internal server error".to_string(),
+                    products: vec![],
+                    total: 0,
+                    page: 0,
+                    per_page: 0,
+                    total_pages: 0,
+                }))
+            }
+        }
     }
 }

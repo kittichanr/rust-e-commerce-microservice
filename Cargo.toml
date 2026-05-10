@@ -4,6 +4,6 @@ members = [
     # "services/order-service",
     "services/auth-service",
     # "infrastructure/api-gateway",
-    "common-libs",
+    "common-libs", "services/order-service",
 ]
 resolver = "2"

@@ -192,9 +192,36 @@ impl ProductService for MyProductService {
 
     async fn delete_product(
         &self,
-        _request: Request<DeleteProductRequest>,
+        request: Request<DeleteProductRequest>,
     ) -> Result<Response<DeleteProductResponse>, Status> {
-        Err(Status::unimplemented("delete_product not implemented yet"))
+        let req = request.into_inner();
+
+        // Validate product_id is provided
+        if req.product_id.is_empty() {
+            return Ok(Response::new(DeleteProductResponse {
+                success: false,
+                message: "Product ID is required".to_string(),
+            }));
+        }
+
+        // Delete product
+        match self.product_repo.delete(&req.product_id).await {
+            Ok(_) => Ok(Response::new(DeleteProductResponse {
+                success: true,
+                message: "Product deleted successfully".to_string(),
+            })),
+            Err(AppError::NotFound(msg)) => Ok(Response::new(DeleteProductResponse {
+                success: false,
+                message: msg,
+            })),
+            Err(e) => {
+                tracing::error!("Failed to delete product: {:?}", e);
+                Ok(Response::new(DeleteProductResponse {
+                    success: false,
+                    message: "Internal server error".to_string(),
+                }))
+            }
+        }
     }
 
     async fn list_products(

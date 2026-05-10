@@ -97,12 +97,58 @@ impl ProductService for MyProductService {
         }
     }
 
-    // Stub implementations for other methods (not implemented yet)
     async fn get_product(
         &self,
-        _request: Request<GetProductRequest>,
+        request: Request<GetProductRequest>,
     ) -> Result<Response<GetProductResponse>, Status> {
-        Err(Status::unimplemented("get_product not implemented yet"))
+        let req = request.into_inner();
+
+        // Validate product_id is provided
+        if req.product_id.is_empty() {
+            return Ok(Response::new(GetProductResponse {
+                success: false,
+                message: "Product ID is required".to_string(),
+                product: None,
+            }));
+        }
+
+        // Get product
+        match self.product_repo.find_by_id(&req.product_id).await {
+            Ok(product) => {
+                let product_info = ProductInfo {
+                    product_id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    stock_quantity: product.stock_quantity,
+                    category: product.category,
+                    image_url: product.image_url,
+                    is_active: product.is_active,
+                    created_at: product.created_at.timestamp(),
+                    updated_at: product.updated_at.timestamp(),
+                };
+
+                Ok(Response::new(GetProductResponse {
+                    success: true,
+                    message: "Product retrieved successfully".to_string(),
+                    product: Some(product_info),
+                }))
+            }
+            Err(AppError::NotFound(msg)) => Ok(Response::new(GetProductResponse {
+                success: false,
+                message: msg,
+                product: None,
+            })),
+            Err(e) => {
+                tracing::error!("Failed to get product: {:?}", e);
+                Ok(Response::new(GetProductResponse {
+                    success: false,
+                    message: "Internal server error".to_string(),
+                    product: None,
+                }))
+            }
+        }
     }
 
     async fn update_product(

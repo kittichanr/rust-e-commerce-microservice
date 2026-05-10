@@ -39,6 +39,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Configuration
 dotenvy = "0.15"
 
+# gRPC
+tonic = "0.14"
+prost = "0.14"
+common-libs = { path = "../../common-libs" }
+
 [[bin]]
 name = "product-service"
 path = "src/main.rs"

@@ -140,9 +140,44 @@ impl OrderService for MyOrderService {
 
     async fn get_order(
         &self,
-        _request: Request<GetOrderRequest>,
+        request: Request<GetOrderRequest>,
     ) -> Result<Response<GetOrderResponse>, Status> {
-        todo!("Implement get_order")
+        let req: GetOrderRequest = request.into_inner();
+
+        // Validate order_id is provided
+        if req.order_id.is_empty() {
+            return Err(Status::invalid_argument("Order ID is required"));
+        }
+
+        // Fetch order from repository
+        let order_with_items =
+            self.order_repo
+                .find_by_id(&req.order_id)
+                .await
+                .map_err(|e| match e {
+                    crate::domain::AppError::NotFound(msg) => {
+                        tracing::warn!("Order not found: {}", msg);
+                        Status::not_found(msg)
+                    }
+                    _ => {
+                        tracing::error!("Failed to fetch order: {:?}", e);
+                        Status::internal(format!("Failed to fetch order: {}", e))
+                    }
+                })?;
+
+        tracing::info!(
+            "Order retrieved successfully: {}",
+            order_with_items.order.id
+        );
+
+        // Convert to proto response
+        let order_info = convert_to_order_info(order_with_items);
+
+        Ok(Response::new(GetOrderResponse {
+            success: true,
+            message: "Order retrieved successfully".to_string(),
+            order: Some(order_info),
+        }))
     }
 
     async fn update_order_status(

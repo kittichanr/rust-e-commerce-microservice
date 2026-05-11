@@ -140,6 +140,7 @@ pub struct Order {
     pub shipping_address: Option<String>,
     pub billing_address: Option<String>,
     pub notes: Option<String>,
+    pub cancellation_reason: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -176,6 +177,7 @@ pub struct OrderResponse {
     pub shipping_address: Option<String>,
     pub billing_address: Option<String>,
     pub notes: Option<String>,
+    pub cancellation_reason: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -213,6 +215,7 @@ impl From<OrderWithItems> for OrderResponse {
             shipping_address: order_with_items.order.shipping_address,
             billing_address: order_with_items.order.billing_address,
             notes: order_with_items.order.notes,
+            cancellation_reason: order_with_items.order.cancellation_reason,
             created_at: order_with_items.order.created_at,
             updated_at: order_with_items.order.updated_at,
         }

@@ -20,7 +20,7 @@ pub trait OrderRepository: Send + Sync {
         id: &str,
         status: OrderStatus,
     ) -> Result<OrderWithItems, AppError>;
-    async fn cancel(&self, id: &str) -> Result<(), AppError>;
+    async fn cancel(&self, id: &str, reason: Option<String>) -> Result<(), AppError>;
 }
 
 #[derive(Clone)]
@@ -238,7 +238,7 @@ impl OrderRepository for MySqlOrderRepository {
         self.find_by_id(id).await
     }
 
-    async fn cancel(&self, id: &str) -> Result<(), AppError> {
+    async fn cancel(&self, id: &str, reason: Option<String>) -> Result<(), AppError> {
         // Get current order
         let order_with_items = self.find_by_id(id).await?;
 
@@ -254,8 +254,9 @@ impl OrderRepository for MySqlOrderRepository {
             )));
         }
 
-        // Update to cancelled
-        sqlx::query("UPDATE orders SET status = 'CANCELLED' WHERE id = ?")
+        // Update to cancelled with reason
+        sqlx::query("UPDATE orders SET status = 'CANCELLED', cancellation_reason = ? WHERE id = ?")
+            .bind(&reason)
             .bind(id)
             .execute(&self.pool)
             .await?;

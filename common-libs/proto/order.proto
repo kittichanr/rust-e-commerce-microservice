@@ -108,4 +108,5 @@ message OrderInfo {
   optional string notes = 11;
   int64 created_at = 12;            // Unix timestamp
   int64 updated_at = 13;            // Unix timestamp
+  optional string cancellation_reason = 14;  // Reason for cancellation
 }

@@ -182,16 +182,110 @@ impl OrderService for MyOrderService {
 
     async fn update_order_status(
         &self,
-        _request: Request<UpdateOrderStatusRequest>,
+        request: Request<UpdateOrderStatusRequest>,
     ) -> Result<Response<UpdateOrderStatusResponse>, Status> {
-        todo!("Implement update_order_status")
+        let req = request.into_inner();
+
+        // Validate order_id is provided
+        if req.order_id.is_empty() {
+            return Err(Status::invalid_argument("Order ID is required"));
+        }
+
+        // Validate and convert proto status to domain status
+        if req.status == 0 {
+            return Err(Status::invalid_argument(
+                "Invalid status: ORDER_STATUS_UNSPECIFIED is not allowed",
+            ));
+        }
+
+        let new_status = convert_proto_status_to_domain(req.status).ok_or_else(|| {
+            Status::invalid_argument(format!("Invalid order status: {}", req.status))
+        })?;
+
+        // Update order status in repository
+        let order_with_items = self
+            .order_repo
+            .update_status(&req.order_id, new_status)
+            .await
+            .map_err(|e| match e {
+                crate::domain::AppError::NotFound(msg) => {
+                    tracing::warn!("Order not found: {}", msg);
+                    Status::not_found(msg)
+                }
+                crate::domain::AppError::InvalidStatusTransition(msg) => {
+                    tracing::warn!("Invalid status transition: {}", msg);
+                    Status::failed_precondition(msg)
+                }
+                _ => {
+                    tracing::error!("Failed to update order status: {:?}", e);
+                    Status::internal(format!("Failed to update order status: {}", e))
+                }
+            })?;
+
+        tracing::info!(
+            "Order status updated successfully: {} -> {}",
+            order_with_items.order.id,
+            order_with_items.order.status
+        );
+
+        // Convert to proto response
+        let order_info = convert_to_order_info(order_with_items);
+
+        Ok(Response::new(UpdateOrderStatusResponse {
+            success: true,
+            message: "Order status updated successfully".to_string(),
+            order: Some(order_info),
+        }))
     }
 
     async fn cancel_order(
         &self,
-        _request: Request<CancelOrderRequest>,
+        request: Request<CancelOrderRequest>,
     ) -> Result<Response<CancelOrderResponse>, Status> {
-        todo!("Implement cancel_order")
+        let req = request.into_inner();
+
+        // Validate order_id is provided
+        if req.order_id.is_empty() {
+            return Err(Status::invalid_argument("Order ID is required"));
+        }
+
+        // Extract and clean cancellation reason
+        let reason = req.reason.filter(|r| !r.trim().is_empty());
+
+        // Log cancellation reason if provided
+        if let Some(ref r) = reason {
+            tracing::info!(
+                "Order {} cancellation requested with reason: {}",
+                req.order_id,
+                r
+            );
+        }
+
+        // Cancel order in repository with reason
+        self.order_repo
+            .cancel(&req.order_id, reason)
+            .await
+            .map_err(|e| match e {
+                crate::domain::AppError::NotFound(msg) => {
+                    tracing::warn!("Order not found: {}", msg);
+                    Status::not_found(msg)
+                }
+                crate::domain::AppError::InvalidStatusTransition(msg) => {
+                    tracing::warn!("Cannot cancel order: {}", msg);
+                    Status::failed_precondition(msg)
+                }
+                _ => {
+                    tracing::error!("Failed to cancel order: {:?}", e);
+                    Status::internal(format!("Failed to cancel order: {}", e))
+                }
+            })?;
+
+        tracing::info!("Order cancelled successfully: {}", req.order_id);
+
+        Ok(Response::new(CancelOrderResponse {
+            success: true,
+            message: "Order cancelled successfully".to_string(),
+        }))
     }
 
     async fn list_orders(
@@ -295,6 +389,7 @@ fn convert_to_order_info(order_with_items: crate::domain::OrderWithItems) -> Ord
         notes: order_with_items.order.notes,
         created_at: order_with_items.order.created_at.timestamp(),
         updated_at: order_with_items.order.updated_at.timestamp(),
+        cancellation_reason: order_with_items.order.cancellation_reason,
     }
 }
 
@@ -339,6 +434,7 @@ fn convert_order_response_to_order_info(order_response: crate::domain::OrderResp
         notes: order_response.notes,
         created_at: order_response.created_at.timestamp(),
         updated_at: order_response.updated_at.timestamp(),
+        cancellation_reason: order_response.cancellation_reason,
     }
 }
 

@@ -196,9 +196,61 @@ impl OrderService for MyOrderService {
 
     async fn list_orders(
         &self,
-        _request: Request<ListOrdersRequest>,
+        request: Request<ListOrdersRequest>,
     ) -> Result<Response<ListOrdersResponse>, Status> {
-        todo!("Implement list_orders")
+        let req = request.into_inner();
+
+        // Convert proto OrderStatus to domain OrderStatus if provided
+        let status = if let Some(proto_status) = req.status {
+            if proto_status != 0 {
+                // 0 is ORDER_STATUS_UNSPECIFIED, meaning no filter
+                Some(convert_proto_status_to_domain(proto_status).ok_or_else(|| {
+                    Status::invalid_argument(format!("Invalid order status: {}", proto_status))
+                })?)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Build filters
+        let filters = crate::domain::OrderFilters {
+            user_id: req.user_id.filter(|id| !id.is_empty()),
+            status,
+            page: req.page,
+            per_page: req.per_page,
+        };
+
+        // Fetch orders from repository
+        let paginated_result = self.order_repo.find_all(filters).await.map_err(|e| {
+            tracing::error!("Failed to list orders: {:?}", e);
+            Status::internal(format!("Failed to list orders: {}", e))
+        })?;
+
+        tracing::info!(
+            "Listed {} orders (page {}/{})",
+            paginated_result.data.len(),
+            paginated_result.page,
+            paginated_result.total_pages
+        );
+
+        // Convert OrderResponse to OrderInfo (proto format)
+        let order_infos: Vec<OrderInfo> = paginated_result
+            .data
+            .into_iter()
+            .map(convert_order_response_to_order_info)
+            .collect();
+
+        Ok(Response::new(ListOrdersResponse {
+            success: true,
+            message: format!("Found {} orders", order_infos.len()),
+            orders: order_infos,
+            total: paginated_result.total,
+            page: paginated_result.page,
+            per_page: paginated_result.per_page,
+            total_pages: paginated_result.total_pages,
+        }))
     }
 }
 
@@ -243,5 +295,65 @@ fn convert_to_order_info(order_with_items: crate::domain::OrderWithItems) -> Ord
         notes: order_with_items.order.notes,
         created_at: order_with_items.order.created_at.timestamp(),
         updated_at: order_with_items.order.updated_at.timestamp(),
+    }
+}
+
+// Helper function to convert OrderResponse to OrderInfo (for list_orders)
+fn convert_order_response_to_order_info(order_response: crate::domain::OrderResponse) -> OrderInfo {
+    let proto_items: Vec<ProtoOrderItem> = order_response
+        .items
+        .into_iter()
+        .map(|item| ProtoOrderItem {
+            product_id: item.product_id,
+            product_name: item.product_name,
+            price: item.price,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+        })
+        .collect();
+
+    // Convert OrderStatus enum
+    let status = match order_response.status {
+        crate::domain::OrderStatus::Cart => 1,
+        crate::domain::OrderStatus::Checkout => 2,
+        crate::domain::OrderStatus::PaymentPending => 3,
+        crate::domain::OrderStatus::PaymentFailed => 4,
+        crate::domain::OrderStatus::Confirmed => 5,
+        crate::domain::OrderStatus::Processing => 6,
+        crate::domain::OrderStatus::Shipped => 7,
+        crate::domain::OrderStatus::Delivered => 8,
+        crate::domain::OrderStatus::Cancelled => 9,
+    };
+
+    OrderInfo {
+        order_id: order_response.id,
+        user_id: order_response.user_id,
+        items: proto_items,
+        subtotal: order_response.subtotal,
+        tax: order_response.tax,
+        shipping_fee: order_response.shipping_fee,
+        total: order_response.total,
+        status,
+        shipping_address: order_response.shipping_address,
+        billing_address: order_response.billing_address,
+        notes: order_response.notes,
+        created_at: order_response.created_at.timestamp(),
+        updated_at: order_response.updated_at.timestamp(),
+    }
+}
+
+// Helper function to convert proto status enum (i32) to domain OrderStatus
+fn convert_proto_status_to_domain(proto_status: i32) -> Option<crate::domain::OrderStatus> {
+    match proto_status {
+        1 => Some(crate::domain::OrderStatus::Cart),
+        2 => Some(crate::domain::OrderStatus::Checkout),
+        3 => Some(crate::domain::OrderStatus::PaymentPending),
+        4 => Some(crate::domain::OrderStatus::PaymentFailed),
+        5 => Some(crate::domain::OrderStatus::Confirmed),
+        6 => Some(crate::domain::OrderStatus::Processing),
+        7 => Some(crate::domain::OrderStatus::Shipped),
+        8 => Some(crate::domain::OrderStatus::Delivered),
+        9 => Some(crate::domain::OrderStatus::Cancelled),
+        _ => None,
     }
 }

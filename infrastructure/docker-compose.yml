@@ -142,6 +142,8 @@ services:
     depends_on:
       order-db:
         condition: service_healthy
+      product-service:
+        condition: service_started
     networks:
       - ecommerce-network
     restart: unless-stopped

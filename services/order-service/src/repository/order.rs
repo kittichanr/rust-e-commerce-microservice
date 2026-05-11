@@ -44,17 +44,22 @@ impl MySqlOrderRepository {
         Ok(items)
     }
 
-    fn calculate_order_totals(items: &[crate::domain::CreateOrderItemInput]) -> (i64, i64, i64, i64) {
-        let subtotal: i64 = items.iter().map(|item| item.price * item.quantity as i64).sum();
-        
+    fn calculate_order_totals(
+        items: &[crate::domain::CreateOrderItemInput],
+    ) -> (i64, i64, i64, i64) {
+        let subtotal: i64 = items
+            .iter()
+            .map(|item| item.price * item.quantity as i64)
+            .sum();
+
         // Simple tax calculation: 10% of subtotal
         let tax = (subtotal as f64 * 0.10) as i64;
-        
+
         // Simple shipping fee: $10 (1000 cents) flat rate
         let shipping_fee = 1000i64;
-        
+
         let total = subtotal + tax + shipping_fee;
-        
+
         (subtotal, tax, shipping_fee, total)
     }
 }
@@ -64,7 +69,9 @@ impl OrderRepository for MySqlOrderRepository {
     async fn create(&self, input: CreateOrderInput) -> Result<OrderWithItems, AppError> {
         // Validate items exist
         if input.items.is_empty() {
-            return Err(AppError::Validation("Order must contain at least one item".to_string()));
+            return Err(AppError::Validation(
+                "Order must contain at least one item".to_string(),
+            ));
         }
 
         // Calculate totals
@@ -91,7 +98,7 @@ impl OrderRepository for MySqlOrderRepository {
         .bind(tax)
         .bind(shipping_fee)
         .bind(total)
-        .bind("CART")
+        .bind(OrderStatus::Cart)
         .bind(&input.shipping_address)
         .bind(&input.billing_address)
         .bind(&input.notes)
@@ -234,7 +241,7 @@ impl OrderRepository for MySqlOrderRepository {
     async fn cancel(&self, id: &str) -> Result<(), AppError> {
         // Get current order
         let order_with_items = self.find_by_id(id).await?;
-        
+
         // Check if order can be cancelled
         if !order_with_items
             .order

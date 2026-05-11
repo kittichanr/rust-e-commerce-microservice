@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use common_libs::proto::order::order_server::OrderServer;
+use common_libs::proto::product::product_client::ProductClient;
 use dotenvy::from_path;
 use order_service::{
     repository::order::MySqlOrderRepository, services::order_service::MyOrderService,
@@ -46,8 +47,25 @@ async fn main() -> anyhow::Result<()> {
     // Initialize repository
     let order_repo = Arc::new(MySqlOrderRepository::new(pool));
 
+    // Connect to product service
+    let product_service_url = std::env::var("PRODUCT_SERVICE_URL")
+        .unwrap_or_else(|_| "http://localhost:50052".to_string());
+
+    tracing::info!("Connecting to product service at {}", product_service_url);
+    let product_client = ProductClient::connect(product_service_url.clone())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                "Failed to connect to product service at {}: {}",
+                product_service_url,
+                e
+            );
+            anyhow::anyhow!("Failed to connect to product service: {}", e)
+        })?;
+    tracing::info!("✓ Connected to product service");
+
     // Initialize gRPC service
-    let order_service = MyOrderService::new(order_repo);
+    let order_service = MyOrderService::new(order_repo, product_client);
 
     // Bind to all interfaces (0.0.0.0) to accept connections from other containers
     let addr = "0.0.0.0:50053".parse()?;

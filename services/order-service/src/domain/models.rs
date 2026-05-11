@@ -5,8 +5,7 @@ use validator::Validate;
 
 // ========== Order Status ==========
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "VARCHAR(50)", rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderStatus {
     Cart,
     Checkout,
@@ -19,10 +18,51 @@ pub enum OrderStatus {
     Cancelled,
 }
 
+// Manual SQLx implementation for MySQL ENUM (treated as TEXT)
+impl sqlx::Type<sqlx::MySql> for OrderStatus {
+    fn type_info() -> sqlx::mysql::MySqlTypeInfo {
+        <String as sqlx::Type<sqlx::MySql>>::type_info()
+    }
+
+    fn compatible(ty: &sqlx::mysql::MySqlTypeInfo) -> bool {
+        <String as sqlx::Type<sqlx::MySql>>::compatible(ty)
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::MySql> for OrderStatus {
+    fn decode(
+        value: sqlx::mysql::MySqlValueRef<'r>,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as sqlx::Decode<sqlx::MySql>>::decode(value)?;
+        match s.as_str() {
+            "CART" => Ok(OrderStatus::Cart),
+            "CHECKOUT" => Ok(OrderStatus::Checkout),
+            "PAYMENT_PENDING" => Ok(OrderStatus::PaymentPending),
+            "PAYMENT_FAILED" => Ok(OrderStatus::PaymentFailed),
+            "CONFIRMED" => Ok(OrderStatus::Confirmed),
+            "PROCESSING" => Ok(OrderStatus::Processing),
+            "SHIPPED" => Ok(OrderStatus::Shipped),
+            "DELIVERED" => Ok(OrderStatus::Delivered),
+            "CANCELLED" => Ok(OrderStatus::Cancelled),
+            _ => Err(format!("Invalid order status: {}", s).into()),
+        }
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::MySql> for OrderStatus {
+    fn encode_by_ref(
+        &self,
+        buf: &mut Vec<u8>,
+    ) -> Result<sqlx::encode::IsNull, Box<dyn std::error::Error + Send + Sync>> {
+        let s = self.to_string();
+        <String as sqlx::Encode<sqlx::MySql>>::encode(s, buf)
+    }
+}
+
 impl OrderStatus {
     pub fn can_transition_to(&self, new_status: &OrderStatus) -> bool {
         use OrderStatus::*;
-        
+
         matches!(
             (self, new_status),
             (Cart, Checkout)
@@ -65,9 +105,9 @@ pub struct OrderItem {
     pub order_id: String,
     pub product_id: String,
     pub product_name: String,
-    pub price: i64,        // Price in cents at time of order
+    pub price: i64, // Price in cents at time of order
     pub quantity: i32,
-    pub subtotal: i64,     // price * quantity
+    pub subtotal: i64, // price * quantity
     pub created_at: DateTime<Utc>,
 }
 
@@ -75,13 +115,13 @@ pub struct OrderItem {
 pub struct CreateOrderItemInput {
     #[validate(length(min = 1))]
     pub product_id: String,
-    
+
     #[validate(length(min = 1))]
     pub product_name: String,
-    
+
     #[validate(range(min = 0))]
     pub price: i64,
-    
+
     #[validate(range(min = 1))]
     pub quantity: i32,
 }
@@ -92,10 +132,10 @@ pub struct CreateOrderItemInput {
 pub struct Order {
     pub id: String,
     pub user_id: String,
-    pub subtotal: i64,         // Sum of all items
-    pub tax: i64,              // Tax amount in cents
-    pub shipping_fee: i64,     // Shipping fee in cents
-    pub total: i64,            // subtotal + tax + shipping_fee
+    pub subtotal: i64,     // Sum of all items
+    pub tax: i64,          // Tax amount in cents
+    pub shipping_fee: i64, // Shipping fee in cents
+    pub total: i64,        // subtotal + tax + shipping_fee
     pub status: OrderStatus,
     pub shipping_address: Option<String>,
     pub billing_address: Option<String>,
@@ -108,10 +148,10 @@ pub struct Order {
 pub struct CreateOrderInput {
     #[validate(length(min = 1))]
     pub user_id: String,
-    
+
     #[validate(length(min = 1))]
     pub items: Vec<CreateOrderItemInput>,
-    
+
     pub shipping_address: Option<String>,
     pub billing_address: Option<String>,
     pub notes: Option<String>,

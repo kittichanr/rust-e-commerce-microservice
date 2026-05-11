@@ -3,20 +3,31 @@ use std::sync::Arc;
 use common_libs::proto::order::order_server::Order as OrderService;
 use common_libs::proto::order::{
     CancelOrderRequest, CancelOrderResponse, CreateOrderRequest, CreateOrderResponse,
-    GetOrderRequest, GetOrderResponse, ListOrdersRequest, ListOrdersResponse,
-    UpdateOrderStatusRequest, UpdateOrderStatusResponse,
+    GetOrderRequest, GetOrderResponse, ListOrdersRequest, ListOrdersResponse, OrderInfo,
+    OrderItem as ProtoOrderItem, UpdateOrderStatusRequest, UpdateOrderStatusResponse,
 };
+use common_libs::proto::product::GetProductRequest;
+use common_libs::proto::product::product_client::ProductClient;
+use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
 
+use crate::domain::{CreateOrderInput, CreateOrderItemInput};
 use crate::repository::order::OrderRepository;
 
 pub struct MyOrderService {
     order_repo: Arc<dyn OrderRepository>,
+    product_client: ProductClient<Channel>,
 }
 
 impl MyOrderService {
-    pub fn new(order_repo: Arc<dyn OrderRepository>) -> Self {
-        Self { order_repo }
+    pub fn new(
+        order_repo: Arc<dyn OrderRepository>,
+        product_client: ProductClient<Channel>,
+    ) -> Self {
+        Self {
+            order_repo,
+            product_client,
+        }
     }
 }
 
@@ -24,9 +35,107 @@ impl MyOrderService {
 impl OrderService for MyOrderService {
     async fn create_order(
         &self,
-        _request: Request<CreateOrderRequest>,
+        request: Request<CreateOrderRequest>,
     ) -> Result<Response<CreateOrderResponse>, Status> {
-        todo!("Implement create_order")
+        let req = request.into_inner();
+
+        // Validate request has items
+        if req.items.is_empty() {
+            return Err(Status::invalid_argument(
+                "Order must contain at least one item",
+            ));
+        }
+
+        // Validate each item with product service
+        let mut validated_items = Vec::new();
+
+        for proto_item in &req.items {
+            // Clone the client for each request (client is cheap to clone)
+            let mut product_client = self.product_client.clone();
+
+            // 1. Validate product exists and fetch details
+            let product_response = product_client
+                .get_product(GetProductRequest {
+                    product_id: proto_item.product_id.clone(),
+                })
+                .await
+                .map_err(|e| {
+                    tracing::warn!("Failed to fetch product {}: {}", proto_item.product_id, e);
+                    Status::not_found(format!("Product '{}' not found", proto_item.product_id))
+                })?;
+
+            let product = product_response.into_inner().product.ok_or_else(|| {
+                Status::not_found(format!("Product '{}' not found", proto_item.product_id))
+            })?;
+
+            // 2. Check product is active
+            if !product.is_active {
+                return Err(Status::failed_precondition(format!(
+                    "Product '{}' is no longer available",
+                    product.name
+                )));
+            }
+
+            // 3. Validate stock availability
+            if product.stock_quantity < proto_item.quantity {
+                return Err(Status::failed_precondition(format!(
+                    "Insufficient stock for product '{}'. Available: {}, Requested: {}",
+                    product.name, product.stock_quantity, proto_item.quantity
+                )));
+            }
+
+            // 4. Use authoritative price from product service (don't trust client)
+            // Note: In a real system, you might want to allow slight price differences
+            // and warn the user, but here we enforce exact match
+            if proto_item.price != product.price {
+                return Err(Status::invalid_argument(format!(
+                    "Price mismatch for product '{}'. Expected: {}, Received: {}. Please refresh your cart.",
+                    product.name, product.price, proto_item.price
+                )));
+            }
+
+            // Validate quantity is positive
+            if proto_item.quantity <= 0 {
+                return Err(Status::invalid_argument(format!(
+                    "Invalid quantity for product '{}': must be greater than 0",
+                    product.name
+                )));
+            }
+
+            // Create validated item with authoritative data
+            validated_items.push(CreateOrderItemInput {
+                product_id: product.product_id,
+                product_name: product.name,
+                price: product.price,
+                quantity: proto_item.quantity,
+            });
+        }
+
+        // Create order input
+        let order_input = CreateOrderInput {
+            user_id: req.user_id,
+            items: validated_items,
+            shipping_address: req.shipping_address,
+            billing_address: req.billing_address,
+            notes: req.notes,
+        };
+
+        // Create order in database
+        let order_with_items = self.order_repo.create(order_input).await.map_err(|e| {
+            tracing::error!("Failed to create order: {:?}", e);
+            Status::internal(format!("Failed to create order: {}", e))
+        })?;
+
+        tracing::info!("Order created successfully: {}", order_with_items.order.id);
+
+        // Convert to proto response
+        let order_info = convert_to_order_info(order_with_items);
+
+        Ok(Response::new(CreateOrderResponse {
+            success: true,
+            message: "Order created successfully".to_string(),
+            order: Some(order_info),
+        }))
     }
 
     async fn get_order(
@@ -55,5 +164,49 @@ impl OrderService for MyOrderService {
         _request: Request<ListOrdersRequest>,
     ) -> Result<Response<ListOrdersResponse>, Status> {
         todo!("Implement list_orders")
+    }
+}
+
+// Helper function to convert domain model to proto
+fn convert_to_order_info(order_with_items: crate::domain::OrderWithItems) -> OrderInfo {
+    let proto_items: Vec<ProtoOrderItem> = order_with_items
+        .items
+        .into_iter()
+        .map(|item| ProtoOrderItem {
+            product_id: item.product_id,
+            product_name: item.product_name,
+            price: item.price,
+            quantity: item.quantity,
+            subtotal: item.subtotal,
+        })
+        .collect();
+
+    // Convert OrderStatus enum
+    let status = match order_with_items.order.status {
+        crate::domain::OrderStatus::Cart => 1,
+        crate::domain::OrderStatus::Checkout => 2,
+        crate::domain::OrderStatus::PaymentPending => 3,
+        crate::domain::OrderStatus::PaymentFailed => 4,
+        crate::domain::OrderStatus::Confirmed => 5,
+        crate::domain::OrderStatus::Processing => 6,
+        crate::domain::OrderStatus::Shipped => 7,
+        crate::domain::OrderStatus::Delivered => 8,
+        crate::domain::OrderStatus::Cancelled => 9,
+    };
+
+    OrderInfo {
+        order_id: order_with_items.order.id,
+        user_id: order_with_items.order.user_id,
+        items: proto_items,
+        subtotal: order_with_items.order.subtotal,
+        tax: order_with_items.order.tax,
+        shipping_fee: order_with_items.order.shipping_fee,
+        total: order_with_items.order.total,
+        status,
+        shipping_address: order_with_items.order.shipping_address,
+        billing_address: order_with_items.order.billing_address,
+        notes: order_with_items.order.notes,
+        created_at: order_with_items.order.created_at.timestamp(),
+        updated_at: order_with_items.order.updated_at.timestamp(),
     }
 }

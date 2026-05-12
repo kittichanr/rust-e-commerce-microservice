@@ -1,0 +1,52 @@
+[package]
+name = "api-gateway"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Actix-web framework
+actix-web = "4.9"
+actix-cors = "0.7"
+actix-rt = "2.10"
+
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# gRPC client for microservices
+tonic = "0.14.5"
+prost = "0.14.3"
+common-libs = { path = "../../common-libs" }
+
+# HTTP client for REST proxying
+reqwest = { version = "0.12", features = ["json"] }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-actix-web = "0.7"
+
+# JWT validation
+jsonwebtoken = "9.3"
+
+# Environment variables
+env_logger = "0.11"
+
+[dev-dependencies]
+
+
+[[bin]]
+name = "api-gateway"
+path = "src/main.rs"

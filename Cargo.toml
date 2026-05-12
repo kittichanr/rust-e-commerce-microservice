@@ -3,7 +3,7 @@ members = [
     "services/auth-service",
     "services/product-service",
     "services/order-service",
-    # "infrastructure/api-gateway",
     "common-libs",
+    "services/api-gateway",
 ]
 resolver = "2"

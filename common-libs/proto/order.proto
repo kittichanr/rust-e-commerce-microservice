@@ -10,20 +10,6 @@ service Order {
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
 }
 
-// Order status enum
-enum OrderStatus {
-  ORDER_STATUS_UNSPECIFIED = 0;
-  CART = 1;
-  CHECKOUT = 2;
-  PAYMENT_PENDING = 3;
-  PAYMENT_FAILED = 4;
-  CONFIRMED = 5;
-  PROCESSING = 6;
-  SHIPPED = 7;
-  DELIVERED = 8;
-  CANCELLED = 9;
-}
-
 message OrderItem {
   string product_id = 1;      // UUID as string
   string product_name = 2;
@@ -58,7 +44,7 @@ message GetOrderResponse {
 
 message UpdateOrderStatusRequest {
   string order_id = 1;        // UUID as string
-  OrderStatus status = 2;
+  string status = 2;          // Status as string (e.g., "CONFIRMED", "PROCESSING")
 }
 
 message UpdateOrderStatusResponse {
@@ -79,7 +65,7 @@ message CancelOrderResponse {
 
 message ListOrdersRequest {
   optional string user_id = 1;      // Filter by user
-  optional OrderStatus status = 2;   // Filter by status
+  optional string status = 2;        // Filter by status (e.g., "CONFIRMED", "PROCESSING")
   optional uint64 page = 3;
   optional uint64 per_page = 4;
 }
@@ -102,7 +88,7 @@ message OrderInfo {
   int64 tax = 5;                    // Tax amount in cents
   int64 shipping_fee = 6;           // Shipping fee in cents
   int64 total = 7;                  // subtotal + tax + shipping_fee
-  OrderStatus status = 8;
+  string status = 8;                // Status as string (e.g., "CONFIRMED", "PROCESSING")
   optional string shipping_address = 9;
   optional string billing_address = 10;
   optional string notes = 11;

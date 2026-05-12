@@ -223,18 +223,12 @@ pub async fn update_product(
 
 // Configure public product routes (no authentication required)
 pub fn configure_public(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/products")
-            .route("", web::get().to(list_products))
-            .route("/{id}", web::get().to(get_product)),
-    );
+    cfg.route("", web::get().to(list_products))
+        .route("/{id}", web::get().to(get_product));
 }
 
 // Configure protected product routes (authentication required)
 pub fn configure_protected(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::scope("/products")
-            .route("", web::post().to(create_product))
-            .route("/{id}", web::put().to(update_product)),
-    );
+    cfg.route("", web::post().to(create_product))
+        .route("/{id}", web::put().to(update_product));
 }

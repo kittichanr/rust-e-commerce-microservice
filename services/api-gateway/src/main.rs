@@ -58,18 +58,37 @@ async fn main() -> std::io::Result<()> {
             .wrap(tracing_actix_web::TracingLogger::default())
             // Health check endpoint
             .route("/health", web::get().to(health_check))
-            // Public routes (no auth required)
+            // Auth routes (no auth required)
             .configure(handlers::auth::configure)
+            // API routes
             .service(
                 web::scope("/api")
-                    .configure(handlers::product::configure_public)
-            )
-            // Protected routes (auth required)
-            .service(
-                web::scope("/api")
-                    .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone()))
-                    .configure(handlers::product::configure_protected)
-                    .configure(handlers::order::configure)
+                    // Product routes - public GET, protected POST/PUT
+                    .service(
+                        web::scope("/products")
+                            // Public routes
+                            .route("", web::get().to(handlers::product::list_products))
+                            .route("/{id}", web::get().to(handlers::product::get_product))
+                            // Protected routes
+                            .route(
+                                "",
+                                web::post()
+                                    .to(handlers::product::create_product)
+                                    .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone())),
+                            )
+                            .route(
+                                "/{id}",
+                                web::put()
+                                    .to(handlers::product::update_product)
+                                    .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone())),
+                            )
+                    )
+                    // Order routes (all protected)
+                    .service(
+                        web::scope("")
+                            .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone()))
+                            .configure(handlers::order::configure)
+                    )
             )
     })
     .bind(&bind_address)?

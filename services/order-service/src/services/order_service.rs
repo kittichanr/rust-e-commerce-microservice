@@ -191,14 +191,13 @@ impl OrderService for MyOrderService {
             return Err(Status::invalid_argument("Order ID is required"));
         }
 
-        // Validate and convert proto status to domain status
-        if req.status == 0 {
-            return Err(Status::invalid_argument(
-                "Invalid status: ORDER_STATUS_UNSPECIFIED is not allowed",
-            ));
+        // Validate status is provided
+        if req.status.is_empty() {
+            return Err(Status::invalid_argument("Order status is required"));
         }
 
-        let new_status = convert_proto_status_to_domain(req.status).ok_or_else(|| {
+        // Convert string status to domain status
+        let new_status = convert_status_string_to_domain(&req.status).ok_or_else(|| {
             Status::invalid_argument(format!("Invalid order status: {}", req.status))
         })?;
 
@@ -294,12 +293,11 @@ impl OrderService for MyOrderService {
     ) -> Result<Response<ListOrdersResponse>, Status> {
         let req = request.into_inner();
 
-        // Convert proto OrderStatus to domain OrderStatus if provided
-        let status = if let Some(proto_status) = req.status {
-            if proto_status != 0 {
-                // 0 is ORDER_STATUS_UNSPECIFIED, meaning no filter
-                Some(convert_proto_status_to_domain(proto_status).ok_or_else(|| {
-                    Status::invalid_argument(format!("Invalid order status: {}", proto_status))
+        // Convert status string to domain OrderStatus if provided
+        let status = if let Some(status_str) = req.status {
+            if !status_str.is_empty() {
+                Some(convert_status_string_to_domain(&status_str).ok_or_else(|| {
+                    Status::invalid_argument(format!("Invalid order status: {}", status_str))
                 })?)
             } else {
                 None
@@ -362,19 +360,6 @@ fn convert_to_order_info(order_with_items: crate::domain::OrderWithItems) -> Ord
         })
         .collect();
 
-    // Convert OrderStatus enum
-    let status = match order_with_items.order.status {
-        crate::domain::OrderStatus::Cart => 1,
-        crate::domain::OrderStatus::Checkout => 2,
-        crate::domain::OrderStatus::PaymentPending => 3,
-        crate::domain::OrderStatus::PaymentFailed => 4,
-        crate::domain::OrderStatus::Confirmed => 5,
-        crate::domain::OrderStatus::Processing => 6,
-        crate::domain::OrderStatus::Shipped => 7,
-        crate::domain::OrderStatus::Delivered => 8,
-        crate::domain::OrderStatus::Cancelled => 9,
-    };
-
     OrderInfo {
         order_id: order_with_items.order.id,
         user_id: order_with_items.order.user_id,
@@ -383,7 +368,7 @@ fn convert_to_order_info(order_with_items: crate::domain::OrderWithItems) -> Ord
         tax: order_with_items.order.tax,
         shipping_fee: order_with_items.order.shipping_fee,
         total: order_with_items.order.total,
-        status,
+        status: order_with_items.order.status.to_string(),
         shipping_address: order_with_items.order.shipping_address,
         billing_address: order_with_items.order.billing_address,
         notes: order_with_items.order.notes,
@@ -407,19 +392,6 @@ fn convert_order_response_to_order_info(order_response: crate::domain::OrderResp
         })
         .collect();
 
-    // Convert OrderStatus enum
-    let status = match order_response.status {
-        crate::domain::OrderStatus::Cart => 1,
-        crate::domain::OrderStatus::Checkout => 2,
-        crate::domain::OrderStatus::PaymentPending => 3,
-        crate::domain::OrderStatus::PaymentFailed => 4,
-        crate::domain::OrderStatus::Confirmed => 5,
-        crate::domain::OrderStatus::Processing => 6,
-        crate::domain::OrderStatus::Shipped => 7,
-        crate::domain::OrderStatus::Delivered => 8,
-        crate::domain::OrderStatus::Cancelled => 9,
-    };
-
     OrderInfo {
         order_id: order_response.id,
         user_id: order_response.user_id,
@@ -428,7 +400,7 @@ fn convert_order_response_to_order_info(order_response: crate::domain::OrderResp
         tax: order_response.tax,
         shipping_fee: order_response.shipping_fee,
         total: order_response.total,
-        status,
+        status: order_response.status.to_string(),
         shipping_address: order_response.shipping_address,
         billing_address: order_response.billing_address,
         notes: order_response.notes,
@@ -438,18 +410,18 @@ fn convert_order_response_to_order_info(order_response: crate::domain::OrderResp
     }
 }
 
-// Helper function to convert proto status enum (i32) to domain OrderStatus
-fn convert_proto_status_to_domain(proto_status: i32) -> Option<crate::domain::OrderStatus> {
-    match proto_status {
-        1 => Some(crate::domain::OrderStatus::Cart),
-        2 => Some(crate::domain::OrderStatus::Checkout),
-        3 => Some(crate::domain::OrderStatus::PaymentPending),
-        4 => Some(crate::domain::OrderStatus::PaymentFailed),
-        5 => Some(crate::domain::OrderStatus::Confirmed),
-        6 => Some(crate::domain::OrderStatus::Processing),
-        7 => Some(crate::domain::OrderStatus::Shipped),
-        8 => Some(crate::domain::OrderStatus::Delivered),
-        9 => Some(crate::domain::OrderStatus::Cancelled),
+// Helper function to convert status string to domain OrderStatus
+fn convert_status_string_to_domain(status: &str) -> Option<crate::domain::OrderStatus> {
+    match status {
+        "CART" => Some(crate::domain::OrderStatus::Cart),
+        "CHECKOUT" => Some(crate::domain::OrderStatus::Checkout),
+        "PAYMENT_PENDING" => Some(crate::domain::OrderStatus::PaymentPending),
+        "PAYMENT_FAILED" => Some(crate::domain::OrderStatus::PaymentFailed),
+        "CONFIRMED" => Some(crate::domain::OrderStatus::Confirmed),
+        "PROCESSING" => Some(crate::domain::OrderStatus::Processing),
+        "SHIPPED" => Some(crate::domain::OrderStatus::Shipped),
+        "DELIVERED" => Some(crate::domain::OrderStatus::Delivered),
+        "CANCELLED" => Some(crate::domain::OrderStatus::Cancelled),
         _ => None,
     }
 }

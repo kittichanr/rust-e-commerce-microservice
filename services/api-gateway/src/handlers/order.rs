@@ -2,7 +2,7 @@ use crate::{error::GatewayError, middleware::Claims, AppState};
 use actix_web::{web, HttpResponse};
 use common_libs::proto::order::{
     order_client::OrderClient, CreateOrderRequest, GetOrderRequest,
-    ListOrdersRequest, OrderItem as ProtoOrderItem, OrderStatus, UpdateOrderStatusRequest,
+    ListOrdersRequest, OrderItem as ProtoOrderItem, UpdateOrderStatusRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ pub struct CreateOrderInput {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateOrderStatusInput {
-    pub status: i32, // OrderStatus enum as i32
+    pub status: String, // OrderStatus as string (e.g., "CONFIRMED", "PROCESSING")
 }
 
 #[derive(Debug, Serialize)]
@@ -45,7 +45,7 @@ pub struct OrderResponse {
     pub tax: i64,
     pub shipping_fee: i64,
     pub total: i64,
-    pub status: i32,
+    pub status: String, // OrderStatus as string (e.g., "CONFIRMED", "PROCESSING")
     pub shipping_address: Option<String>,
     pub billing_address: Option<String>,
     pub notes: Option<String>,
@@ -238,12 +238,23 @@ pub async fn update_order_status(
         .await
         .map_err(|e| GatewayError::ServiceUnavailable(format!("Order service: {}", e)))?;
 
-    let status = OrderStatus::try_from(input.status)
-        .map_err(|_| GatewayError::BadRequest("Invalid order status".to_string()))?;
+    // Validate the status string is not empty
+    if input.status.is_empty() {
+        return Err(GatewayError::BadRequest("Order status is required".to_string()));
+    }
+
+    // Validate the status string is a valid value
+    let valid_statuses = [
+        "CART", "CHECKOUT", "PAYMENT_PENDING", "PAYMENT_FAILED",
+        "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"
+    ];
+    if !valid_statuses.contains(&input.status.as_str()) {
+        return Err(GatewayError::BadRequest(format!("Invalid order status: {}", input.status)));
+    }
 
     let request = tonic::Request::new(UpdateOrderStatusRequest {
         order_id: order_id.into_inner(),
-        status: status as i32,
+        status: input.status.clone(),
     });
 
     let response = client.update_order_status(request).await?.into_inner();

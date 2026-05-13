@@ -61,31 +61,27 @@ impl ProductRepository for MySqlProductRepository {
 
         match result {
             Ok(_) => self.find_by_id(&id).await,
-            Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
-                Err(AppError::Conflict(format!("Product with SKU '{}' already exists", input.sku)))
-            }
+            Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => Err(
+                AppError::Conflict(format!("Product with SKU '{}' already exists", input.sku)),
+            ),
             Err(e) => Err(AppError::Database(e)),
         }
     }
 
     async fn find_by_id(&self, id: &str) -> Result<Product, AppError> {
-        let product = sqlx::query_as::<_, Product>(
-            "SELECT * FROM products WHERE id = ?"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let product = sqlx::query_as::<_, Product>("SELECT * FROM products WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         product.ok_or_else(|| AppError::NotFound(format!("Product with id '{}' not found", id)))
     }
 
     async fn find_by_sku(&self, sku: &str) -> Result<Product, AppError> {
-        let product = sqlx::query_as::<_, Product>(
-            "SELECT * FROM products WHERE sku = ?"
-        )
-        .bind(sku)
-        .fetch_optional(&self.pool)
-        .await?;
+        let product = sqlx::query_as::<_, Product>("SELECT * FROM products WHERE sku = ?")
+            .bind(sku)
+            .fetch_optional(&self.pool)
+            .await?;
 
         product.ok_or_else(|| AppError::NotFound(format!("Product with SKU '{}' not found", sku)))
     }
@@ -265,13 +261,11 @@ impl ProductRepository for MySqlProductRepository {
     }
 
     async fn update_stock(&self, id: &str, quantity_delta: i32) -> Result<Product, AppError> {
-        sqlx::query(
-            "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?"
-        )
-        .bind(quantity_delta)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?")
+            .bind(quantity_delta)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
 
         self.find_by_id(id).await
     }

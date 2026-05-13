@@ -3,7 +3,9 @@ use std::sync::Arc;
 use common_libs::proto::product::product_server::ProductServer;
 use dotenvy::from_path;
 use product_service::{
-    repository::product::MySqlProductRepository, services::product_service::MyProductService,
+    events::{consumer::ProductEventConsumer, handler::EventHandler},
+    repository::product::MySqlProductRepository,
+    services::product_service::MyProductService,
 };
 use tonic::transport::Server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -45,6 +47,26 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize repository
     let product_repo = Arc::new(MySqlProductRepository::new(pool));
+
+    // Initialize Kafka event consumer
+    let kafka_brokers =
+        std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
+
+    tracing::info!(
+        "Initializing Kafka consumer with brokers: {}",
+        kafka_brokers
+    );
+
+    let event_handler = Arc::new(EventHandler::new(product_repo.clone()));
+    let consumer = ProductEventConsumer::new(
+        &kafka_brokers,
+        "product-service-consumer-group",
+        event_handler,
+    )?;
+
+    // Start Kafka consumer in background
+    let _consumer_handle = consumer.start();
+    tracing::info!("✓ Kafka consumer started in background");
 
     // Initialize gRPC service
     let product_service = MyProductService::new(product_repo);

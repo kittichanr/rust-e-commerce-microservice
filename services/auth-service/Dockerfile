@@ -5,7 +5,9 @@ RUN apt update && apt install -y \
     lld \
     clang \
     protobuf-compiler \
-    libprotobuf-dev
+    libprotobuf-dev \
+    cmake \
+    pkg-config
 
 # Planner stage - analyze dependencies
 FROM chef as planner

@@ -30,9 +30,7 @@ impl sqlx::Type<sqlx::MySql> for OrderStatus {
 }
 
 impl<'r> sqlx::Decode<'r, sqlx::MySql> for OrderStatus {
-    fn decode(
-        value: sqlx::mysql::MySqlValueRef<'r>,
-    ) -> Result<Self, sqlx::error::BoxDynError> {
+    fn decode(value: sqlx::mysql::MySqlValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <String as sqlx::Decode<sqlx::MySql>>::decode(value)?;
         match s.as_str() {
             "CART" => Ok(OrderStatus::Cart),

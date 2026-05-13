@@ -50,9 +50,16 @@ Services implement the generated traits from `common_libs::proto::<service>::<se
 
 ### Inter-Service Communication
 
-Services communicate with each other using gRPC clients:
+Services communicate using two patterns:
+
+**Synchronous (gRPC)**:
 - **Order Service → Product Service**: Order service uses `ProductClient` from `common_libs::proto::product` to validate products and check stock availability when creating orders
 - Services connect to each other via the shared Docker network or localhost in development
+
+**Asynchronous (Kafka Events)**:
+- **Order Service → Product Service**: When an order is marked as DELIVERED, the order service publishes an `OrderDeliveredEvent` to Kafka, which the product service consumes to reduce stock quantities
+- Events are defined in `common-libs/src/events.rs`
+- Kafka topics: `order.delivered`
 
 ### Database Architecture
 
@@ -151,23 +158,49 @@ The project is actively developed with three functional microservices:
 ### Product Service
 - Product catalog management (CRUD operations)
 - Category management
-- Stock tracking
+- Stock tracking with automatic reduction on order delivery (via Kafka events)
 - MySQL database backend
 - gRPC service for inter-service communication
+- Kafka consumer for processing order events
 
 ### Order Service
 - Order creation and management
 - Order status tracking (Pending, Processing, Shipped, Delivered, Cancelled)
-- Integration with Product Service via gRPC client
+- Integration with Product Service via gRPC client for order validation
 - Order listing and retrieval
+- Kafka producer for publishing order events (OrderDeliveredEvent when status changes to DELIVERED)
 - MySQL database backend
 - gRPC server on port 50053
 
 ### Infrastructure
 - Docker Compose setup with dedicated MySQL databases for each service
-- Health checks for database dependencies
+- Apache Kafka and Zookeeper for event-driven architecture
+- Health checks for database and Kafka dependencies
 - Shared networking for inter-service communication
 - Environment-based configuration
 
-### Planned Features
-- API Gateway (currently in planning)
+### Common Libraries
+- Shared event schemas (`common-libs/src/events.rs`)
+  - `OrderDeliveredEvent` - Published when order is delivered, consumed by product service to reduce stock
+- Protocol buffer definitions for gRPC services
+- Event topics defined in `common_libs::events::topics`
+
+### Event-Driven Architecture
+
+The system uses Kafka for asynchronous event processing:
+
+**Event Flow:**
+1. Order status updated to DELIVERED → Order Service publishes `OrderDeliveredEvent`
+2. Product Service consumes the event and reduces stock for all items in the order
+3. Stock reduction is logged and low-stock warnings are emitted if needed
+
+See `KAFKA_SETUP.md` for detailed information about:
+- Installing dependencies (cmake, pkg-config)
+- Event schemas and topics
+- Testing the event flow
+- Monitoring and debugging
+
+### API Gateway
+- Unified REST API gateway for all services
+- JWT authentication middleware
+- Request routing to appropriate microservices

@@ -12,3 +12,5 @@ pub mod proto {
         tonic::include_proto!("order");
     }
 }
+
+pub mod events;

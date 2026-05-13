@@ -45,6 +45,9 @@ tonic = "0.14"
 prost = "0.14"
 common-libs = { path = "../../common-libs" }
 
+# Kafka
+rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
+
 [[bin]]
 name = "order-service"
 path = "src/main.rs"

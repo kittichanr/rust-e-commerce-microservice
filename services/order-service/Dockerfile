@@ -1,11 +1,13 @@
 # Build stage using cargo-chef for caching dependencies
-FROM lukemathwalker/cargo-chef:latest as chef
+FROM lukemathwalker/cargo-chef:0.1.71-rust-1.88 AS chef
 WORKDIR /app
 RUN apt update && apt install -y \
     lld \
     clang \
     protobuf-compiler \
-    libprotobuf-dev
+    libprotobuf-dev \
+    cmake \
+    pkg-config
 
 # Planner stage - analyze dependencies
 FROM chef as planner

@@ -2,8 +2,8 @@ use chrono::{Duration, Utc};
 use common_libs::proto::auth::auth_server::Auth;
 use common_libs::proto::auth::{
     GetUserInfoRequest, GetUserInfoResponse, LoginRequest, LoginResponse, LogoutRequest,
-    LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest,
-    RegisterResponse, UserInfo,
+    LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse,
+    UserInfo,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -108,8 +108,7 @@ impl Auth for MyAuth {
         // If user doesn't exist, hash a dummy password to maintain constant time
         let password_valid = match &user_option {
             Some(user) => {
-                utils::verify_password(&password, &user.password_hash)
-                    .map_err(Status::from)?
+                utils::verify_password(&password, &user.password_hash).map_err(Status::from)?
             }
             None => {
                 // Perform dummy password hash to maintain constant time
@@ -121,8 +120,8 @@ impl Auth for MyAuth {
         };
 
         // Now check if user exists
-        let user = user_option
-            .ok_or_else(|| Status::unauthenticated("invalid email or password"))?;
+        let user =
+            user_option.ok_or_else(|| Status::unauthenticated("invalid email or password"))?;
 
         // Check if user is active and password is valid
         if !user.is_active || !password_valid {

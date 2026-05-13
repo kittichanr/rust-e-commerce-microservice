@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 # Async runtime
 tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros"] }
+tokio-stream = "0.1"
 async-trait = "0.1"
 
 # Database
@@ -44,6 +45,9 @@ dotenvy = "0.15"
 tonic = "0.14"
 prost = "0.14"
 common-libs = { path = "../../common-libs" }
+
+# Kafka
+rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
 
 [[bin]]
 name = "product-service"

@@ -4,7 +4,8 @@ use common_libs::proto::order::order_server::OrderServer;
 use common_libs::proto::product::product_client::ProductClient;
 use dotenvy::from_path;
 use order_service::{
-    repository::order::MySqlOrderRepository, services::order_service::MyOrderService,
+    events::producer::OrderEventProducer, repository::order::MySqlOrderRepository,
+    services::order_service::MyOrderService,
 };
 use tonic::transport::Server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -64,8 +65,32 @@ async fn main() -> anyhow::Result<()> {
         })?;
     tracing::info!("✓ Connected to product service");
 
+    // Initialize Kafka event producer
+    let event_producer = match std::env::var("KAFKA_BROKERS") {
+        Ok(brokers) => {
+            tracing::info!("Initializing Kafka producer with brokers: {}", brokers);
+            match OrderEventProducer::new(&brokers) {
+                Ok(producer) => {
+                    tracing::info!("✓ Kafka producer initialized successfully");
+                    Some(Arc::new(producer))
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to initialize Kafka producer: {}. Events will not be published.",
+                        e
+                    );
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            tracing::info!("KAFKA_BROKERS not set, event publishing disabled");
+            None
+        }
+    };
+
     // Initialize gRPC service
-    let order_service = MyOrderService::new(order_repo, product_client);
+    let order_service = MyOrderService::new(order_repo, product_client, event_producer);
 
     // Bind to all interfaces (0.0.0.0) to accept connections from other containers
     let addr = "0.0.0.0:50053".parse()?;

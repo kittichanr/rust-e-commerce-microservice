@@ -4,7 +4,7 @@ mod handlers;
 mod middleware;
 
 use actix_cors::Cors;
-use actix_web::{middleware::Logger, web, App, HttpResponse, HttpServer};
+use actix_web::{App, HttpResponse, HttpServer, middleware::Logger, web};
 use config::Config;
 use std::sync::Arc;
 
@@ -72,23 +72,23 @@ async fn main() -> std::io::Result<()> {
                             // Protected routes
                             .route(
                                 "",
-                                web::post()
-                                    .to(handlers::product::create_product)
-                                    .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone())),
+                                web::post().to(handlers::product::create_product).wrap(
+                                    middleware::JwtAuth::new(state.config.jwt.secret.clone()),
+                                ),
                             )
                             .route(
                                 "/{id}",
-                                web::put()
-                                    .to(handlers::product::update_product)
-                                    .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone())),
-                            )
+                                web::put().to(handlers::product::update_product).wrap(
+                                    middleware::JwtAuth::new(state.config.jwt.secret.clone()),
+                                ),
+                            ),
                     )
                     // Order routes (all protected)
                     .service(
                         web::scope("")
-                            .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone()))
                             .configure(handlers::order::configure)
-                    )
+                            .wrap(middleware::JwtAuth::new(state.config.jwt.secret.clone())),
+                    ),
             )
     })
     .bind(&bind_address)?

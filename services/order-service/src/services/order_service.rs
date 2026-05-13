@@ -12,21 +12,25 @@ use tonic::transport::Channel;
 use tonic::{Request, Response, Status};
 
 use crate::domain::{CreateOrderInput, CreateOrderItemInput};
+use crate::events::producer::OrderEventProducer;
 use crate::repository::order::OrderRepository;
 
 pub struct MyOrderService {
     order_repo: Arc<dyn OrderRepository>,
     product_client: ProductClient<Channel>,
+    event_producer: Option<Arc<OrderEventProducer>>,
 }
 
 impl MyOrderService {
     pub fn new(
         order_repo: Arc<dyn OrderRepository>,
         product_client: ProductClient<Channel>,
+        event_producer: Option<Arc<OrderEventProducer>>,
     ) -> Self {
         Self {
             order_repo,
             product_client,
+            event_producer,
         }
     }
 }
@@ -226,6 +230,43 @@ impl OrderService for MyOrderService {
             order_with_items.order.id,
             order_with_items.order.status
         );
+
+        // Publish OrderDeliveredEvent if status changed to DELIVERED
+        if order_with_items.order.status == crate::domain::OrderStatus::Delivered {
+            if let Some(ref producer) = self.event_producer {
+                tracing::info!(
+                    "Order {} marked as DELIVERED, publishing event",
+                    order_with_items.order.id
+                );
+
+                // Create event
+                use crate::events::producer::convert_order_item_to_event;
+                use common_libs::events::OrderDeliveredEvent;
+
+                let event = OrderDeliveredEvent::new(
+                    order_with_items.order.id.clone(),
+                    order_with_items.order.user_id.clone(),
+                    order_with_items
+                        .items
+                        .iter()
+                        .map(convert_order_item_to_event)
+                        .collect(),
+                    order_with_items.order.updated_at,
+                );
+
+                // Publish event (don't fail the request if event publishing fails)
+                if let Err(e) = producer.publish_order_delivered(event).await {
+                    tracing::error!(
+                        "Failed to publish OrderDeliveredEvent for order {}: {:?}",
+                        order_with_items.order.id,
+                        e
+                    );
+                    // Consider: In production, you might want to retry or queue for later
+                }
+            } else {
+                tracing::warn!("Event producer not configured, skipping event publication");
+            }
+        }
 
         // Convert to proto response
         let order_info = convert_to_order_info(order_with_items);

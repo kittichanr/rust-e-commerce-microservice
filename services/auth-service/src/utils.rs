@@ -2,7 +2,7 @@ use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -11,10 +11,8 @@ use uuid::Uuid;
 use crate::domain::errors::AppError;
 
 /// Static email validation regex (compiled once, thread-safe)
-static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-        .expect("Invalid email regex pattern")
-});
+static EMAIL_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").expect("Invalid email regex pattern"));
 
 pub fn generate_id() -> Uuid {
     Uuid::now_v7()
@@ -75,19 +73,19 @@ pub fn parse_uuid(s: &str) -> Result<Uuid, uuid::Error> {
 /// JWT claims structure for access tokens
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccessTokenClaims {
-    pub sub: String,      // subject (user_id)
-    pub email: String,    // user email
-    pub exp: i64,         // expiration time (Unix timestamp)
-    pub iat: i64,         // issued at (Unix timestamp)
+    pub sub: String,   // subject (user_id)
+    pub email: String, // user email
+    pub exp: i64,      // expiration time (Unix timestamp)
+    pub iat: i64,      // issued at (Unix timestamp)
 }
 
 /// JWT claims structure for refresh tokens
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RefreshTokenClaims {
-    pub sub: String,      // subject (user_id)
-    pub jti: String,      // JWT ID (token id for tracking)
-    pub exp: i64,         // expiration time (Unix timestamp)
-    pub iat: i64,         // issued at (Unix timestamp)
+    pub sub: String, // subject (user_id)
+    pub jti: String, // JWT ID (token id for tracking)
+    pub exp: i64,    // expiration time (Unix timestamp)
+    pub iat: i64,    // issued at (Unix timestamp)
 }
 
 /// Generate an access token (short-lived, e.g., 15 minutes)
@@ -157,25 +155,19 @@ where
 }
 
 /// Validate and decode an access token
-pub fn validate_access_token(
-    token: &str,
-    secret: &str,
-) -> Result<AccessTokenClaims, AppError> {
+pub fn validate_access_token(token: &str, secret: &str) -> Result<AccessTokenClaims, AppError> {
     validate_token(token, secret, "access")
 }
 
 /// Validate and decode a refresh token
-pub fn validate_refresh_token(
-    token: &str,
-    secret: &str,
-) -> Result<RefreshTokenClaims, AppError> {
+pub fn validate_refresh_token(token: &str, secret: &str) -> Result<RefreshTokenClaims, AppError> {
     validate_token(token, secret, "refresh")
 }
 
 /// Hash a token for storage (using SHA-256 for deterministic hashing)
 /// Unlike password hashing, we need deterministic hashes for token lookup
 pub fn hash_token(token: &str) -> Result<String, AppError> {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     if token.is_empty() {
         return Err(AppError::Validation("token cannot be empty".to_string()));

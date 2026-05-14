@@ -1,0 +1,61 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: ecommerce-microservices
+
+build:
+  artifacts:
+    - image: ecommerce-auth-service
+      context: ../..
+      docker:
+        dockerfile: services/auth-service/Dockerfile
+    - image: ecommerce-product-service
+      context: ../..
+      docker:
+        dockerfile: services/product-service/Dockerfile
+    - image: ecommerce-order-service
+      context: ../..
+      docker:
+        dockerfile: services/order-service/Dockerfile
+  local:
+    push: false  # Don't push to registry for local development
+
+deploy:
+  kubectl: {}
+
+portForward:
+  - resourceType: service
+    resourceName: auth-service
+    namespace: ecommerce
+    port: 50051
+    localPort: 50051
+  - resourceType: service
+    resourceName: product-service
+    namespace: ecommerce
+    port: 50052
+    localPort: 50052
+  - resourceType: service
+    resourceName: order-service
+    namespace: ecommerce
+    port: 50053
+    localPort: 50053
+  - resourceType: service
+    resourceName: kafka
+    namespace: ecommerce
+    port: 9092
+    localPort: 9092
+  - resourceType: service
+    resourceName: auth-db
+    namespace: ecommerce
+    port: 3306
+    localPort: 3306
+  - resourceType: service
+    resourceName: product-db
+    namespace: ecommerce
+    port: 3306
+    localPort: 3307
+  - resourceType: service
+    resourceName: order-db
+    namespace: ecommerce
+    port: 3306
+    localPort: 3308

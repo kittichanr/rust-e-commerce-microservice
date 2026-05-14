@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: ecommerce
+  labels:
+    app: zookeeper
+spec:
+  type: ClusterIP
+  ports:
+    - port: 2181
+      targetPort: 2181
+      protocol: TCP
+      name: client
+  selector:
+    app: zookeeper
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  namespace: ecommerce
+  labels:
+    app: zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:7.5.0
+          ports:
+            - containerPort: 2181
+              name: client
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-config
+                  key: ZOOKEEPER_CLIENT_PORT
+            - name: ZOOKEEPER_TICK_TIME
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-config
+                  key: ZOOKEEPER_TICK_TIME
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

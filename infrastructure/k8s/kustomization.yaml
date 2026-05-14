@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecommerce
+
+resources:
+  # Namespace
+  - namespace.yaml
+  # Config and Secrets
+  - configmap.yaml
+  - secrets.yaml
+  # Databases
+  - databases/auth-db.yaml
+  - databases/product-db.yaml
+  - databases/order-db.yaml
+  # Kafka Infrastructure
+  - kafka/zookeeper.yaml
+  - kafka/kafka.yaml
+  # Microservices
+  - services/auth-service.yaml
+  - services/product-service.yaml
+  - services/order-service.yaml

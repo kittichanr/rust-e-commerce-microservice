@@ -1,0 +1,27 @@
+info:
+  name: Order - Create Order
+  type: grpc
+  seq: 11
+
+grpc:
+  url: http://localhost:50053
+  method: /order.Order/CreateOrder
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/order.proto
+  message: |-
+    {
+      "user_id": "019E0ADA8C6C790186ECF7A9D16C1529",
+      "items": [
+          {
+            "product_id": "019e10e0-3326-7532-a73c-cc6bcade51e3",
+            "product_name": "shirt",
+            "price": 199,
+            "quantity": 1,
+            "subtotal": 199
+          }
+      ],
+      "shipping_address": "cumque",
+      "billing_address": "vivo",
+      "notes": "commodo"
+    }
+  auth: inherit

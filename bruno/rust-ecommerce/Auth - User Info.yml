@@ -1,0 +1,15 @@
+info:
+  name: Auth - User Info
+  type: grpc
+  seq: 5
+
+grpc:
+  url: http://localhost:50051
+  method: /auth.Auth/GetUserInfo
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/auth.proto
+  message: |-
+    {
+      "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTlkZTZiZC0yNmYwLTczMDAtYThhNC00OTc2ZGI0YTA3ZmEiLCJlbWFpbCI6InBldGNoMUBnbWFpbC5jb20iLCJleHAiOjE3NzgyMDI4NzIsImlhdCI6MTc3ODIwMTk3Mn0.TAimPG2pgMFJmdhyuJQSJaAqX5S-8R-H-vd7_8rFrgA"
+    }
+  auth: inherit

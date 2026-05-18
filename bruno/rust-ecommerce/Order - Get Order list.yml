@@ -1,0 +1,17 @@
+info:
+  name: Order - Get Order list
+  type: grpc
+  seq: 13
+
+grpc:
+  url: http://localhost:50053
+  method: /order.Order/ListOrders
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/order.proto
+  message: |-
+    {
+      "user_id": "019E0ADA8C6C790186ECF7A9D16C1529",
+      "page": 1,
+      "per_page": 10
+    }
+  auth: inherit

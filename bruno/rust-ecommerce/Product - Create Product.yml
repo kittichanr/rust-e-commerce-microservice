@@ -1,0 +1,22 @@
+info:
+  name: Product - Create Product
+  type: grpc
+  seq: 6
+
+grpc:
+  url: http://localhost:50052
+  method: /product.Product/CreateProduct
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/product.proto
+  message: |-
+    {
+      "sku": "1234",
+      "name": "shirt",
+      "description": "shirt description",
+      "price": 199,
+      "stock_quantity": 1000,
+      "category": "cloths",
+      "image_url": "",
+      "is_active": true
+    }
+  auth: inherit

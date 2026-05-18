@@ -1,0 +1,35 @@
+info:
+  name: Update Product by id
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: http://localhost:8080/api/products/:id
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: id
+      value: 019e1a97-bac1-7592-9469-2d8532e54958
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+         "sku": "TEST-002",
+        "name": "Test Product",
+        "description": "Test description",
+        "price": 1999,
+        "stock_quantity": 100,
+        "category": "Test",
+        "image_url": "",
+        "is_active": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

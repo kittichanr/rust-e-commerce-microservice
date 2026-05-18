@@ -1,0 +1,15 @@
+info:
+  name: Product - Delete Product
+  type: grpc
+  seq: 8
+
+grpc:
+  url: http://localhost:50052
+  method: /product.Product/DeleteProduct
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/product.proto
+  message: |-
+    {
+      "product_id": "019e108d-96b1-7cf2-81bf-78391270306a"
+    }
+  auth: inherit

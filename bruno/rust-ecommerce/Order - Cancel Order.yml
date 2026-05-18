@@ -1,0 +1,16 @@
+info:
+  name: Order - Cancel Order
+  type: grpc
+  seq: 15
+
+grpc:
+  url: http://localhost:50053
+  method: /order.Order/CancelOrder
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/order.proto
+  message: |-
+    {
+      "order_id": "019e1627-41d0-72c0-af37-782eca2f64fd",
+      "reason": "test"
+    }
+  auth: inherit

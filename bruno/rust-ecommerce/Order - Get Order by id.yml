@@ -1,0 +1,15 @@
+info:
+  name: Order - Get Order by id
+  type: grpc
+  seq: 12
+
+grpc:
+  url: http://localhost:50053
+  method: /order.Order/GetOrder
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/order.proto
+  message: |-
+    {
+      "order_id": "019e1627-41d0-72c0-af37-782eca2f64fd"
+    }
+  auth: inherit

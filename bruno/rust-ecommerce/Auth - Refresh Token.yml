@@ -1,0 +1,15 @@
+info:
+  name: Auth - Refresh Token
+  type: grpc
+  seq: 3
+
+grpc:
+  url: http://localhost:50051
+  method: /auth.Auth/RefreshToken
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/auth.proto
+  message: |-
+    {
+      "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTlkZTZiZC0yNmYwLTczMDAtYThhNC00OTc2ZGI0YTA3ZmEiLCJqdGkiOiIwMTllMDUxOC1jZGVkLTc2NjItYTE4Zi0xZDI4N2NkZDU0YzAiLCJleHAiOjE3Nzg4MDY3NzIsImlhdCI6MTc3ODIwMTk3Mn0.T1as0aeEYlnO5X41CvtSnLWdKQxPATMRmz75DCxwPDY"
+    }
+  auth: inherit

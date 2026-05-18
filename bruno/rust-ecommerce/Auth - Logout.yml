@@ -1,0 +1,15 @@
+info:
+  name: Auth - Logout
+  type: grpc
+  seq: 4
+
+grpc:
+  url: http://localhost:50051
+  method: /auth.Auth/Logout
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/auth.proto
+  message: |-
+    {
+      "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTlkZTZiZC0yNmYwLTczMDAtYThhNC00OTc2ZGI0YTA3ZmEiLCJqdGkiOiIwMTllMDUxOS02MjA4LTcxMzItOTRhMS03M2ZhNThiYWYzZTEiLCJleHAiOjE3Nzg4MDY4MTAsImlhdCI6MTc3ODIwMjAxMH0.GCRmaT9o7DIrtdpz9nvNAA-kaBwllK872Ern46aDViY"
+    }
+  auth: inherit

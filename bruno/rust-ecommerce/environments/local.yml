@@ -1,0 +1,4 @@
+name: local
+variables:
+  - name: access_token
+    value: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMTllMGFkYS04YzZjLTc5MDEtODZlYy1mN2E5ZDE2YzE1MjkiLCJlbWFpbCI6InBldGNoMUBnbWFpbC5jb20iLCJleHAiOjE3Nzg2NTQyMTQsImlhdCI6MTc3ODY1MzMxNH0.bs0oax0DeZWSgiL5VoRGz4XR507ylGmb2M7-kobEOf4

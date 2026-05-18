@@ -1,0 +1,15 @@
+info:
+  name: Product - Get Product by Id
+  type: grpc
+  seq: 9
+
+grpc:
+  url: http://localhost:50052
+  method: /product.Product/GetProduct
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/product.proto
+  message: |-
+    {
+      "product_id": "01934e5f-0001-7890-b123-000000000001"
+    }
+  auth: inherit

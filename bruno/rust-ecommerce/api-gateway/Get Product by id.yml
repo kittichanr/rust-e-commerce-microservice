@@ -1,0 +1,25 @@
+info:
+  name: Get Product by id
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: http://localhost:8080/api/products/:id
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: id
+      value: 019e1a97-bac1-7592-9469-2d8532e54958
+      type: path
+  body:
+    type: json
+    data: ""
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

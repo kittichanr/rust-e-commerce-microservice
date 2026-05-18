@@ -1,0 +1,16 @@
+info:
+  name: Auth - Register
+  type: grpc
+  seq: 1
+
+grpc:
+  url: http://localhost:50051
+  method: /auth.Auth/Register
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/auth.proto
+  message: |-
+    {
+      "email": "petch1@gmail.com",
+      "password": "123456789"
+    }
+  auth: inherit

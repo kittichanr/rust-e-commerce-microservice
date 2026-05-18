@@ -1,0 +1,28 @@
+info:
+  name: Update order status
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: http://localhost:8080/api/orders/:id/status
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: id
+      value: 019e2001-311e-7621-aef0-8b69d168ee9c
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "DELIVERED"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

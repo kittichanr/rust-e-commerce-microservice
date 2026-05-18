@@ -1,0 +1,35 @@
+info:
+  name: Create Order
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: http://localhost:8080/api/orders
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  body:
+    type: json
+    data: |-
+      {
+        "items": [
+            {
+              "product_id": "019e1a97-bac1-7592-9469-2d8532e54958",
+              "product_name": "Test Product",
+              "price": 1999,
+              "quantity": 1,
+              "subtotal": 1999
+            }
+        ],
+        "shipping_address": "cumque",
+        "billing_address": "vivo",
+        "notes": "commodo"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

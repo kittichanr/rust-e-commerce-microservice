@@ -1,0 +1,23 @@
+info:
+  name: Product - Update Product
+  type: grpc
+  seq: 7
+
+grpc:
+  url: http://localhost:50052
+  method: /product.Product/UpdateProduct
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/product.proto
+  message: |-
+    {
+      "product_id": "019e108d-96b1-7cf2-81bf-78391270306a",
+      "sku": "1234",
+      "name": "shirt",
+      "description": "shirt description",
+      "price": 199,
+      "stock_quantity": 999,
+      "category": "cloths",
+      "image_url": "",
+      "is_active": true
+    }
+  auth: inherit

@@ -1,0 +1,29 @@
+opencollection: 1.0.0
+
+info:
+  name: rust-ecommerce
+config:
+  protobuf:
+    protoFiles:
+      - type: file
+        path: ../../SideProjects/rust-e-commerce-microservice/common-libs/proto/auth.proto
+      - type: file
+        path: ../../SideProjects/rust-e-commerce-microservice/common-libs/proto/product.proto
+      - type: file
+        path: ../../SideProjects/rust-e-commerce-microservice/common-libs/proto/order.proto
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

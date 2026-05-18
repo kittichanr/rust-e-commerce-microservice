@@ -1,0 +1,16 @@
+info:
+  name: Auth - Login
+  type: grpc
+  seq: 2
+
+grpc:
+  url: http://localhost:50051
+  method: /auth.Auth/Login
+  methodType: unary
+  protoFilePath: ../../common-libs/proto/auth.proto
+  message: |-
+    {
+      "email": "petch1@gmail.com",
+      "password": "123456789"
+    }
+  auth: inherit
